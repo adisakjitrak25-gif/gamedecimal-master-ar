@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeciMotion: นวัตกรรมเกมทศนิยม 5 ตัวเลือกแนว สสวท.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <style>
+        body {
+            font-family: 'Sarabun', 'Chakra Petch', sans-serif;
+            background: radial-gradient(circle at center, #0B1528 0%, #030712 100%);
+            overflow-x: hidden;
+        }
+        .cyber-panel {
+            background: rgba(13, 27, 42, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .neon-glow-blue {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        .neon-glow-green {
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.8);
+            text-shadow: 0 0 15px rgba(34, 197, 94, 0.8);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col">
+
+    <div id="green-flash" class="fixed inset-0 bg-green-500 pointer-events-none z-50 opacity-0 mix-blend-screen transition-opacity duration-150"></div>
+    <div id="wrong-flash" class="fixed inset-0 bg-red-500 pointer-events-none z-50 opacity-0 mix-blend-screen transition-opacity duration-150"></div>
+
+    <header class="w-full py-4 px-6 border-b border-blue-950 bg-slate-950/80 backdrop-blur-md flex justify-between items-center z-10">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600/20 p-2 rounded-lg border border-blue-500/30">
+                <i class="fa-solid fa-calculator text-blue-400 text-2xl animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wider font-['Chakra_Petch'] text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-green-400">
+                    DeciMotion <span class="text-xs font-semibold text-slate-400">v3.0.0</span>
+                </h1>
+                <p class="text-xs text-slate-400">นวัตกรรมโต้ตอบคณิตศาสตร์ 10 ด่าน ด่านละ 10 ข้อ (ระบบตอบครั้งเดียวลุยด่านย่อย)</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="text-sm bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-2">
+                <span id="camera-status-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-ping"></span>
+                <span id="camera-status-text" class="text-xs">กำลังเตรียมกล้อง...</span>
+            </span>
+            <button id="toggle-camera-btn" onclick="toggleCameraControl()" class="bg-slate-800 hover:bg-slate-700 px-4 py-1.5 rounded-lg border border-slate-600 text-xs transition duration-200">
+                <i class="fa-solid fa-video-slash mr-1"></i> ปิดกล้อง / เล่นด้วยเมาส์
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        
+        <div class="lg:col-span-8 flex flex-col justify-between space-y-4">
+            
+            <div class="cyber-panel p-4 rounded-2xl flex justify-between items-center">
+                <div>
+                    <span class="text-xs font-semibold text-teal-400 tracking-wider uppercase font-['Chakra_Petch']">สสวท. Pedagogy Guide</span>
+                    <h2 class="text-base font-semibold text-slate-200 mt-1" id="pedagogy-tip">
+                        "จงวิเคราะห์ความสัมพันธ์ของวงเล็บและการคิดคำนวณ"
+                    </h2>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 block" id="current-chapter-name">ด่านที่ 1</span>
+                    <span class="text-2xl font-bold font-['Chakra_Petch'] text-blue-400" id="current-level-indicator">โจทย์ข้อที่ 1 / 10</span>
+                </div>
+            </div>
+
+            <div class="relative w-full aspect-video bg-slate-950 rounded-2xl border-2 border-blue-500/30 overflow-hidden shadow-2xl flex items-center justify-center">
+                <video id="webcam" class="hidden" autoplay playsinline muted></video>
+                <canvas id="ar-canvas" class="w-full h-full object-cover"></canvas>
+
+                <div class="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-start pointer-events-none">
+                    <div class="w-full max-w-xs flex flex-col gap-1">
+                        <div class="bg-slate-800/80 h-3 rounded-full border border-slate-700 overflow-hidden p-0.5">
+                            <div id="game-progress-bar" class="h-full bg-gradient-to-r from-blue-500 via-teal-400 to-green-500 rounded-full transition-all duration-300" style="width: 1%;"></div>
+                        </div>
+                        <span class="text-[10px] text-slate-400" id="overall-percent-text">คืบหน้าภาพรวม: 0/100 ข้อ</span>
+                    </div>
+                    <div class="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-yellow-400"></i>
+                        <span class="font-['Chakra_Petch'] text-sm font-bold text-yellow-400" id="hud-score">คะแนน: 0</span>
+                    </div>
+                </div>
+
+                <div class="absolute inset-x-4 top-14 md:top-16 pointer-events-none flex flex-col items-center">
+                    <div class="bg-slate-950/95 border-2 border-teal-500/60 rounded-xl px-5 py-3 shadow-2xl text-center max-w-xl backdrop-blur-lg">
+                        <span class="text-[10px] md:text-xs text-teal-400 font-bold uppercase tracking-widest font-['Chakra_Petch']" id="level-title-label">บทเรียนหลัก</span>
+                        <div class="text-base md:text-xl font-extrabold tracking-wide text-white mt-0.5 font-['Chakra_Petch']" id="active-question">
+                            โจทย์กำลังแสดงผล...
+                        </div>
+                        <div class="flex justify-center gap-1.5 mt-2" id="sub-question-indicators"></div>
+                    </div>
+                </div>
+
+                <div id="camera-fallback-msg" class="hidden absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col justify-center items-center text-center p-6 z-20">
+                    <div class="bg-blue-600/10 p-4 rounded-full border border-blue-500/20 mb-4 animate-bounce">
+                        <i class="fa-solid fa-circle-info text-blue-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold">เข้าสู่โหมดควบคุมผ่านเมาส์ / สัมผัส</h3>
+                    <p class="text-sm text-slate-400 mt-2 max-w-md">ระบบไม่พบกล้องหรือปิดการใช้งาน ท่านสามารถใช้นิ้วมือสัมผัสหรือใช้เมาส์คลิกเพื่อตอบคำถามได้อย่างสมบูรณ์แบบ</p>
+                    <button onclick="requestCameraAccess()" class="mt-4 bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs px-4 py-2 rounded-lg transition duration-200">
+                        <i class="fa-solid fa-camera mr-1"></i> อนุญาตสิทธิ์กล้องใหม่อีกครั้ง
+                    </button>
+                </div>
+            </div>
+
+            <div class="cyber-panel p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4">
+                <span class="text-xs text-slate-400 text-center sm:text-left">⚡️ <strong class="text-yellow-400">กติกานวัตกรรมใหม่:</strong> ป้ายคำตอบถูกเพิ่มเป็น <strong class="text-teal-400">5 ตัวเลือก</strong> เพื่อลดโอกาสเดา และตอบแต่ละข้อได้เพียง <strong class="text-rose-400">ครั้งเดียว</strong> ระบบจะประเมินคะแนนแล้วส่งคุณไปยังข้อถัดไปทันที!</span>
+                <div class="flex gap-2">
+                    <button onclick="skipQuestion()" class="text-xs text-slate-400 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg transition">ข้ามข้อนี้</button>
+                    <button onclick="resetGame()" class="text-xs text-red-400 bg-red-950/20 hover:bg-red-900/30 border border-red-500/30 px-3 py-1.5 rounded-lg transition">เริ่มใหม่ทั้งหมด</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="lg:col-span-4 flex flex-col space-y-6">
+            
+            <div class="cyber-panel p-5 rounded-2xl flex-1 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-lg font-bold border-b border-slate-800 pb-3 flex items-center justify-between">
+                        <span>แผนที่หลักสูตร สสวท.</span>
+                        <span class="text-xs text-teal-400">10 ด่านหลัก</span>
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-2 mt-4" id="level-dots-grid"></div>
+
+                    <div class="bg-slate-950/80 border border-blue-900/50 rounded-xl p-4 mt-6">
+                        <h4 class="text-xs font-bold text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fa-solid fa-lightbulb"></i> แผนภาพการคำนวณ 3 ขั้นตอน
+                        </h4>
+                        
+                        <div class="mt-3 space-y-2 text-xs" id="step-breakdown-container">
+                            <div class="flex items-start gap-2">
+                                <span class="bg-slate-800 text-slate-300 w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0">1</span>
+                                <p id="step-1-text" class="text-slate-300">-</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="bg-slate-800 text-slate-300 w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0">2</span>
+                                <p id="step-2-text" class="text-slate-300">-</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="bg-slate-800 text-slate-300 w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0">3</span>
+                                <p id="step-3-text" class="text-slate-300">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 border-t border-slate-800 pt-4">
+                    <div class="flex items-center space-x-3 bg-blue-950/40 p-3 rounded-xl border border-blue-900/30">
+                        <div class="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center border border-teal-500/40 flex-shrink-0">
+                            <i class="fa-solid fa-graduation-cap text-teal-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-200">ประเมินจากศาสตราจารย์ AI</p>
+                            <p class="text-[11px] text-slate-400 mt-0.5" id="professor-speech">"ยินดีต้อนรับสู่โหมด 5 ตัวเลือกสุดเข้มข้นครับ!"</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <div id="start-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-lg z-40 flex items-center justify-center p-4">
+        <div class="max-w-2xl w-full cyber-panel p-8 rounded-3xl border-2 border-blue-500/40 text-center relative overflow-hidden">
+            <h2 class="text-2xl md:text-4xl font-extrabold tracking-wider font-['Chakra_Petch'] text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-green-400">
+                DECIMOTION MATH ADVENTURE
+            </h2>
+            <p class="text-sm text-slate-400 mt-2 max-w-lg mx-auto">
+                นวัตกรรมสื่อนวัตกรรมคณิตศาสตร์วิถีใหม่ ตามหลักสูตร สสวท. ยกระดับความท้าทายเป็น <span class="text-teal-400 font-bold">5 ตัวเลือก</span> และ <span class="text-rose-400 font-bold">ตอบได้เพียงครั้งเดียวต่อข้อ</span> เพื่อการประเมินทักษะคณิตศาสตร์ที่แท้จริง
+            </p>
+
+            <div class="my-6 p-4 bg-slate-900/90 rounded-2xl text-left border border-slate-800 text-xs md:text-sm space-y-2">
+                <h4 class="font-bold text-teal-400 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info"></i> กฎการท้าทายระดับศาสตราจารย์:
+                </h4>
+                <p>• ในแต่ละข้อคุณต้องเลือกป้ายคำตอบ 1 ใน 5 ตัวเลือกจากการวิเคราะห์อย่างแม่นยำ</p>
+                <p>• <span class="text-yellow-400 font-semibold">โอกาสเดียว:</span> ทันทีที่เลือกตัวเลือก ระบบจะเฉลยผล และนำไปยังข้อต่อไปทันที ไม่สามารถแก้ตัวได้!</p>
+                <p>• เก็บสะสมคะแนน 10 คะแนนต่อข้อ คะแนนเต็มรวมทั้งสิ้น 1,000 คะแนนเต็ม</p>
+            </div>
+
+            <button onclick="startGame()" class="w-full bg-gradient-to-r from-blue-500 via-teal-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white font-bold py-3.5 px-8 rounded-xl shadow-lg shadow-teal-500/20 transition duration-200">
+                <i class="fa-solid fa-circle-play mr-2"></i> เริ่มบทเรียนทักษะทศนิยม 100 ข้อ
+            </button>
+        </div>
+    </div>
+
+    <div id="victory-modal" class="hidden fixed inset-0 bg-slate-950/98 backdrop-blur-xl z-40 flex items-center justify-center p-4">
+        <div class="max-w-md w-full cyber-panel p-8 rounded-3xl border-2 border-green-500/40 text-center">
+            <div class="inline-block bg-green-500/20 p-5 rounded-full border border-green-400/30 mb-4">
+                <i class="fa-solid fa-graduation-cap text-green-400 text-5xl"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold font-['Chakra_Petch'] text-green-400">สุดยอดอัจฉริยะคณิตศาสตร์!</h2>
+            <p class="text-sm text-slate-300 mt-2">คุณทำภารกิจวิเคราะห์โจทย์คำนวณทศนิยม 10 ด่านย่อย รวม 100 ข้อเสร็จสมบูรณ์เรียบร้อยแล้ว!</p>
+
+            <div class="my-6 p-4 bg-slate-900 rounded-2xl border border-slate-800">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">คะแนนรวมสุทธิที่ประเมินได้</p>
+                <p class="text-4xl font-extrabold text-white mt-1 font-['Chakra_Petch']" id="final-score">0 / 1000</p>
+            </div>
+
+            <button onclick="resetGame()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200">
+                <i class="fa-solid fa-arrow-rotate-left mr-1"></i> ย้อนกลับไปเริ่มใหม่
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const levels = [
+            {
+                name: "ด่านที่ 1: การบวกลบพื้นฐาน (1 ตำแหน่ง)",
+                tip: "ทำในวงเล็บก่อนเป็นขั้นตอนแรกเสมอ จากนั้นคำนวณจากซ้ายไปขวา",
+                questions: [
+                    { q: "(1.5 + 2.5) - 1.2 = ?", opts: [2.8, 3.2, 1.8], ans: 2.8, steps: ["1.5 + 2.5 = 4.0", "4.0 - 1.2 = 2.8", "คำตอบสุทธิคือ 2.8"] },
+                    { q: "5.5 - (1.1 + 2.2) = ?", opts: [2.2, 3.3, 1.1], ans: 2.2, steps: ["1.1 + 2.2 = 3.3", "5.5 - 3.3 = 2.2", "คำตอบสุทธิคือ 2.2"] },
+                    { q: "(10.0 - 4.2) + 1.5 = ?", opts: [7.3, 8.3, 6.8], ans: 7.3, steps: ["10.0 - 4.2 = 5.8", "5.8 + 1.5 = 7.3", "คำตอบสุทธิคือ 7.3"] },
+                    { q: "4.5 + 3.5 - 2.1 = ?", opts: [5.9, 6.1, 4.9], ans: 5.9, steps: ["4.5 + 3.5 = 8.0", "8.0 - 2.1 = 5.9", "คำตอบสุทธิคือ 5.9"] },
+                    { q: "(12.8 - 5.3) - 3.5 = ?", opts: [4.0, 5.0, 3.5], ans: 4.0, steps: ["12.8 - 5.3 = 7.5", "7.5 - 3.5 = 4.0", "คำตอบสุทธิคือ 4.0"] },
+                    { q: "6.7 + (9.2 - 4.2) = ?", opts: [11.7, 10.7, 12.5], ans: 11.7, steps: ["9.2 - 4.2 = 5.0", "6.7 + 5.0 = 11.7", "คำตอบสุทธิคือ 11.7"] },
+                    { q: "(3.8 + 2.2) + 4.5 = ?", opts: [10.5, 9.5, 11.0], ans: 10.5, steps: ["3.8 + 2.2 = 6.0", "6.0 + 4.5 = 10.5", "คำตอบสุทธิคือ 10.5"] },
+                    { q: "8.9 - 2.4 - 1.5 = ?", opts: [5.0, 4.5, 5.5], ans: 5.0, steps: ["8.9 - 2.4 = 6.5", "6.5 - 1.5 = 5.0", "คำตอบสุทธิคือ 5.0"] },
+                    { q: "(15.6 - 10.0) + 3.4 = ?", opts: [9.0, 8.6, 10.0], ans: 9.0, steps: ["15.6 - 10.0 = 5.6", "5.6 + 3.4 = 9.0", "คำตอบสุทธิคือ 9.0"] },
+                    { q: "1.2 + 2.3 + 3.4 = ?", opts: [6.9, 7.0, 5.9], ans: 6.9, steps: ["1.2 + 2.3 = 3.5", "3.5 + 3.4 = 6.9", "คำตอบสุทธิคือ 6.9"] }
+                ]
+            },
+            {
+                name: "ด่านที่ 2: ความสำคัญของวงเล็บ (1 ตำแหน่ง)",
+                tip: "สังเกตตำแหน่งวงเล็บให้ดี เพราะการเปลี่ยนวงเล็บย่อมเปลี่ยนคำตอบ",
+                questions: [
+                    { q: "10.0 - (4.5 - 1.5) = ?", opts: [7.0, 6.5, 8.0], ans: 7.0, steps: ["4.5 - 1.5 = 3.0", "10.0 - 3.0 = 7.0", "คำตอบคือ 7.0"] },
+                    { q: "(8.8 + 1.2) - (4.5 - 2.5) = ?", opts: [8.0, 9.0, 7.5], ans: 8.0, steps: ["(8.8+1.2)=10.0 และ (4.5-2.5)=2.0", "10.0 - 2.0 = 8.0", "คำตอบคือ 8.0"] },
+                    { q: "15.5 - (3.2 + 4.8) - 1.5 = ?", opts: [6.0, 7.5, 5.0], ans: 6.0, steps: ["3.2 + 4.8 = 8.0", "15.5 - 8.0 = 7.5", "7.5 - 1.5 = 6.0"] },
+                    { q: "(12.4 + 2.6) - (3.1 + 1.9) = ?", opts: [10.0, 9.0, 11.0], ans: 10.0, steps: ["15.0 - 5.0 = 10.0", "เทียบเคียงวงเล็บหน้าหลังสำเร็จ", "คำตอบคือ 10.0"] },
+                    { q: "20.0 - (15.5 - 5.5) + 2.5 = ?", opts: [12.5, 11.5, 10.0], ans: 12.5, steps: ["15.5 - 5.5 = 10.0", "20.0 - 10.0 = 10.0", "10.0 + 2.5 = 12.5"] },
+                    { q: "(6.4 - 2.4) + (8.5 - 3.5) = ?", opts: [9.0, 10.0, 8.0], ans: 9.0, steps: ["6.4 - 2.4 = 4.0", "8.5 - 3.5 = 5.0", "4.0 + 5.0 = 9.0"] },
+                    { q: "18.9 - (9.9 - 4.9) - 5.0 = ?", opts: [8.9, 9.9, 7.9], ans: 8.9, steps: ["9.9 - 4.9 = 5.0", "18.9 - 5.0 = 13.9", "13.9 - 5.0 = 8.9"] },
+                    { q: "(1.5 + 1.5 + 1.5) - 2.5 = ?", opts: [2.0, 3.0, 1.5], ans: 2.0, steps: ["1.5 + 1.5 + 1.5 = 4.5", "4.5 - 2.5 = 2.0", "คำตอบสุทธิคือ 2.0"] },
+                    { q: "30.0 - (10.5 + 9.5) - 5.5 = ?", opts: [4.5, 5.5, 3.5], ans: 4.5, steps: ["10.5 + 9.5 = 20.0", "30.0 - 20.0 = 10.0", "10.0 - 5.5 = 4.5"] },
+                    { q: "(25.2 - 5.2) - (12.3 - 2.3) = ?", opts: [10.0, 12.0, 8.0], ans: 10.0, steps: ["25.2 - 5.2 = 20.0", "12.3 - 2.3 = 10.0", "20.0 - 10.0 = 10.0"] }
+                ]
+            },
+            {
+                name: "ด่านที่ 3: บวกลบละเอียด (2 ตำแหน่ง)",
+                tip: "จัดหลักทศนิยมให้ตรงกันเพื่อป้องกันข้อผิดพลาดในการคำนวณ",
+                questions: [
+                    { q: "(1.25 + 0.75) - 0.50 = ?", opts: [1.5, 2.0, 1.25], ans: 1.5, steps: ["1.25 + 0.75 = 2.00", "2.00 - 0.50 = 1.50", "คำตอบคือ 1.5"] },
+                    { q: "4.55 - (1.20 + 2.35) = ?", opts: [1.0, 1.5, 0.8], ans: 1.0, steps: ["1.20 + 2.35 = 3.55", "4.55 - 3.55 = 1.00", "คำตอบคือ 1.0"] },
+                    { q: "(10.50 - 3.25) + 1.75 = ?", opts: [9.0, 8.5, 9.5], ans: 9.0, steps: ["10.50 - 3.25 = 7.25", "7.25 + 1.75 = 9.00", "คำตอบคือ 9.0"] },
+                    { q: "8.75 - 2.50 - 1.25 = ?", opts: [5.0, 4.75, 5.25], ans: 5.0, steps: ["8.75 - 2.50 = 6.25", "6.25 - 1.25 = 5.00", "คำตอบคือ 5.0"] },
+                    { q: "(5.60 + 4.40) - (2.15 + 1.85) = ?", opts: [6.0, 5.5, 7.0], ans: 6.0, steps: ["5.60 + 4.40 = 10.00", "2.15 + 1.85 = 4.00", "10.00 - 4.00 = 6.00"] },
+                    { q: "12.80 - (6.40 - 1.20) = ?", opts: [7.6, 8.0, 7.2], ans: 7.6, steps: ["6.40 - 1.20 = 5.20", "12.80 - 5.20 = 7.60", "คำตอบคือ 7.6"] },
+                    { q: "(3.15 + 4.85) + 2.50 = ?", opts: [10.5, 11.0, 10.0], ans: 10.5, steps: ["3.15 + 4.85 = 8.00", "8.00 + 2.50 = 10.50", "คำตอบคือ 10.5"] },
+                    { q: "15.00 - 5.75 - 4.25 = ?", opts: [5.0, 4.5, 6.0], ans: 5.0, steps: ["15.00 - 5.75 = 9.25", "9.25 - 4.25 = 5.00", "คำตอบคือ 5.0"] },
+                    { q: "(20.35 - 10.35) + 5.75 = ?", opts: [15.75, 15.5, 16.0], ans: 15.75, steps: ["20.35 - 10.35 = 10.00", "10.00 + 5.75 = 15.75", "คำตอบคือ 15.75"] },
+                    { q: "(7.50 + 2.50) - (4.25 + 0.75) = ?", opts: [5.0, 4.5, 6.0], ans: 5.0, steps: ["7.50 + 2.50 = 10.00", "4.25 + 0.75 = 5.00", "10.00 - 5.00 = 5.00"] }
+                ]
+            },
+            {
+                name: "ด่านที่ 4: การคูณทศนิยมปฐมบท",
+                tip: "นับจำนวนหลักทศนิยมของตัวคูณมาบวกกันเพื่อระบุตำแหน่งผลคูณ",
+                questions: [
+                    { q: "(1.2 + 0.8) × 2.5 = ?", opts: [5.0, 4.0, 6.0], ans: 5.0, steps: ["1.2 + 0.8 = 2.0", "2.0 × 2.5 = 5.0", "คำตอบคือ 5.0"] },
+                    { q: "10.5 - (1.5 × 4) = ?", opts: [4.5, 5.5, 3.5], ans: 4.5, steps: ["1.5 × 4 = 6.0", "10.5 - 6.0 = 4.5", "คำตอบคือ 4.5"] },
+                    { q: "(3.2 × 2) + 1.6 = ?", opts: [8.0, 7.6, 8.4], ans: 8.0, steps: ["3.2 × 2 = 6.4", "6.4 + 1.6 = 8.0", "คำตอบคือ 8.0"] },
+                    { q: "15.0 - (2.5 × 3) = ?", opts: [7.5, 8.0, 6.5], ans: 7.5, steps: ["2.5 × 3 = 7.5", "15.0 - 7.5 = 7.5", "คำตอบคือ 7.5"] },
+                    { q: "(4.5 × 2) - 3.5 = ?", opts: [5.5, 6.0, 5.0], ans: 5.5, steps: ["4.5 × 2 = 9.0", "9.0 - 3.5 = 5.5", "คำตอบคือ 5.5"] },
+                    { q: "2.2 × 3 + 1.4 = ?", opts: [8.0, 7.8, 8.2], ans: 8.0, steps: ["2.2 × 3 = 6.6", "6.6 + 1.4 = 8.0", "คำตอบคือ 8.0"] },
+                    { q: "(1.1 × 5) + (2.2 × 2) = ?", opts: [9.9, 10.0, 9.5], ans: 9.9, steps: ["1.1 × 5 = 5.5", "2.2 × 2 = 4.4", "5.5 + 4.4 = 9.9"] },
+                    { q: "20.0 - (4.8 × 2) = ?", opts: [10.4, 11.4, 9.6], ans: 10.4, steps: ["4.8 × 2 = 9.6", "20.0 - 9.6 = 10.4", "คำตอบคือ 10.4"] },
+                    { q: "(0.5 × 10) - 2.5 = ?", opts: [2.5, 3.0, 2.0], ans: 2.5, steps: ["0.5 × 10 = 5.0", "5.0 - 2.5 = 2.5", "คำตอบคือ 2.5"] },
+                    { q: "(3.5 × 2) + (1.5 × 4) = ?", opts: [13.0, 12.0, 14.0], ans: 13.0, steps: ["3.5 × 2 = 7.0", "1.5 × 4 = 6.0", "7.0 + 6.0 = 13.0"] }
+                ]
+            },
+            {
+                name: "ด่านที่ 5: การหารทศนิยมระคน",
+                tip: "การหารทศนิยม ให้ทำให้ตัวหารเป็นจำนวนเต็มก่อนช่วยลดข้อผิดพลาด",
+                questions: [
+                    { q: "(4.8 ÷ 2) + 1.6 = ?", opts: [4.0, 3.8, 4.2], ans: 4.0, steps: ["4.8 ÷ 2 = 2.4", "2.4 + 1.6 = 4.0", "คำตอบคือ 4.0"] },
+                    { q: "10.0 - (8.4 ÷ 4) = ?", opts: [7.9, 8.0, 7.5], ans: 7.9, steps: ["8.4 ÷ 4 = 2.1", "10.0 - 2.1 = 7.9", "คำตอบคือ 7.9"] },
+                    { q: "(15.5 ÷ 5) × 2 = ?", opts: [6.2, 5.5, 6.8], ans: 6.2, steps: ["15.5 ÷ 5 = 3.1", "3.1 × 2 = 6.2", "คำตอบคือ 6.2"] },
+                    { q: "12.0 + (9.6 ÷ 3) = ?", opts: [15.2, 14.8, 15.6], ans: 15.2, steps: ["9.6 ÷ 3 = 3.2", "12.0 + 3.2 = 15.2", "คำตอบคือ 15.2"] },
+                    { q: "(25.5 ÷ 5) - 2.1 = ?", opts: [3.0, 2.8, 3.2], ans: 3.0, steps: ["25.5 ÷ 5 = 5.1", "5.1 - 2.1 = 3.0", "คำตอบคือ 3.0"] },
+                    { q: "7.5 - (6.4 ÷ 8) = ?", opts: [6.7, 6.5, 6.9], ans: 6.7, steps: ["6.4 ÷ 8 = 0.8", "7.5 - 0.8 = 6.7", "คำตอบคือ 6.7"] },
+                    { q: "(10.0 ÷ 4) + 2.5 = ?", opts: [5.0, 4.5, 6.0], ans: 5.0, steps: ["10.0 ÷ 4 = 2.5", "2.5 + 2.5 = 5.0", "คำตอบคือ 5.0"] },
+                    { q: "(18.6 ÷ 6) × 3 = ?", opts: [9.3, 9.0, 9.6], ans: 9.3, steps: ["18.6 ÷ 6 = 3.1", "3.1 × 3 = 9.3", "คำตอบคือ 9.3"] },
+                    { q: "20.0 - (12.4 ÷ 2) = ?", opts: [13.8, 14.0, 13.2], ans: 13.8, steps: ["12.4 ÷ 2 = 6.2", "20.0 - 6.2 = 13.8", "คำตอบคือ 13.8"] },
+                    { q: "(30.5 ÷ 5) + 4.9 = ?", opts: [11.0, 10.5, 11.5], ans: 11.0, steps: ["30.5 ÷ 5 = 6.1", "6.1 + 4.9 = 11.0", "คำตอบคือ 11.0"] }
+                ]
+            },
+            {
+                name: "ด่านที่ 6: บทเรียนวงเล็บซ้อนสองกลุ่ม",
+                tip: "คำนวณวงเล็บซ้ายและวงเล็บขวาแยกกันเป็นอิสระ ก่อนนำมาประเมินผลเครื่องหมายกลาง",
+                questions: [
+                    { q: "(4.5 + 5.5) × (2.4 ÷ 2) = ?", opts: [12.0, 10.0, 14.0], ans: 12.0, steps: ["(4.5+5.5)=10.0 และ (2.4÷2)=1.2", "10.0 × 1.2 = 12.0", "คำตอบคือ 12.0"] },
+                    { q: "(12.8 - 2.8) - (1.5 × 4) = ?", opts: [4.0, 5.0, 3.5], ans: 4.0, steps: ["(12.8-2.8)=10.0 และ (1.5×4)=6.0", "10.0 - 6.0 = 4.0", "คำตอบคือ 4.0"] },
+                    { q: "(9.3 ÷ 3) + (1.2 × 5) = ?", opts: [9.1, 8.5, 9.5], ans: 9.1, steps: ["(9.3÷3)=3.1 และ (1.2×5)=6.0", "3.1 + 6.0 = 9.1", "คำตอบคือ 9.1"] },
+                    { q: "(20.5 - 10.5) × (0.5 × 4) = ?", opts: [20.0, 18.0, 22.0], ans: 20.0, steps: ["(20.5-10.5)=10.0 และ (0.5×4)=2.0", "10.0 × 2.0 = 20.0", "คำตอบคือ 20.0"] },
+                    { q: "(15.6 ÷ 2) - (1.8 × 2) = ?", opts: [4.2, 4.0, 4.5], ans: 4.2, steps: ["(15.6÷2)=7.8 และ (1.8×2)=3.6", "7.8 - 3.6 = 4.2", "คำตอบคือ 4.2"] },
+                    { q: "(3.5 × 3) + (12.5 ÷ 5) = ?", opts: [13.0, 12.5, 13.5], ans: 13.0, steps: ["(3.5×3)=10.5 และ (12.5÷5)=2.5", "10.5 + 2.5 = 13.0", "คำตอบคือ 13.0"] },
+                    { q: "(10.0 - 4.5) × (8.4 ÷ 4) = ?", opts: [11.55, 11.5, 12.0], ans: 11.55, steps: ["(10.0-4.5)=5.5 และ (8.4÷4)=2.1", "5.5 × 2.1 = 11.55", "คำตอบคือ 11.55"] },
+                    { q: "(25.0 - 15.0) ÷ (1.25 × 4) = ?", opts: [2.0, 2.5, 1.5], ans: 2.0, steps: ["(25.0-15.0)=10.0 และ (1.25×4)=5.0", "10.0 ÷ 5.0 = 2.0", "คำตอบคือ 2.0"] },
+                    { q: "(8.8 ÷ 8) + (9.9 ÷ 9) = ?", opts: [2.2, 2.0, 2.4], ans: 2.2, steps: ["(8.8÷8)=1.1 และ (9.9÷9)=1.1", "1.1 + 1.1 = 2.2", "คำตอบคือ 2.2"] },
+                    { q: "(6.3 × 2) - (12.6 ÷ 2) = ?", opts: [6.3, 6.0, 6.6], ans: 6.3, steps: ["(6.3×2)=12.6 และ (12.6÷2)=6.3", "12.6 - 6.3 = 6.3", "คำตอบคือ 6.3"] }
+                ]
+            },
+            {
+                name: "ด่านที่ 7: สมรภูมิไม่มีวงเล็บ (MDAS)",
+                tip: "สำคัญมาก! ลำดับความสำคัญในการทำคือ: 1.คูณ/หาร 2.บวก/ลบ เสมอเมื่อไม่มีวงเล็บระบุ",
+                questions: [
+                    { q: "5.5 + 1.2 × 3 = ?", opts: [9.1, 20.1, 8.7], ans: 9.1, steps: ["ทำคูณก่อน: 1.2 × 3 = 3.6", "นำไปบวก: 5.5 + 3.6 = 9.1", "คำตอบคือ 9.1"] },
+                    { q: "12.6 - 4.8 ÷ 2 = ?", opts: [10.2, 3.9, 9.8], ans: 10.2, steps: ["ทำหารก่อน: 4.8 ÷ 2 = 2.4", "นำไปลบ: 12.6 - 2.4 = 10.2", "คำตอบคือ 10.2"] },
+                    { q: "3.5 × 2 + 8.4 ÷ 4 = ?", opts: [9.1, 7.7, 8.5], ans: 9.1, steps: ["ทำคูณ: 7.0 และ ทำหาร: 2.1", "นำมาบวกกัน: 7.0 + 2.1 = 9.1", "คำตอบคือ 9.1"] },
+                    { q: "15.0 - 2.5 × 4 + 3.2 = ?", opts: [8.2, 53.2, 7.8], ans: 8.2, steps: ["ทำคูณก่อน: 2.5 × 4 = 10.0", "บวกลบจากซ้ายไปขวา: 15.0 - 10.0 = 5.0", "5.0 + 3.2 = 8.2"] },
+                    { q: "2.4 × 5 - 6.3 ÷ 3 = ?", opts: [9.9, 9.5, 10.1], ans: 9.9, steps: ["ทำคูณ: 12.0 และ ทำหาร: 2.1", "นำมาลบกัน: 12.0 - 2.1 = 9.9", "คำตอบคือ 9.9"] },
+                    { q: "10.0 + 15.5 ÷ 5 - 2.1 = ?", opts: [11.0, 3.0, 11.5], ans: 11.0, steps: ["ทำหารก่อน: 15.5 ÷ 5 = 3.1", "คำนวณซ้ายไปขวา: 10.0 + 3.1 = 13.1", "13.1 - 2.1 = 11.0"] },
+                    { q: "4.2 × 3 - 1.5 × 4 = ?", opts: [6.6, 6.0, 7.2], ans: 6.6, steps: ["ทำคูณทั้งคู่: 12.6 และ 6.0", "ลบกัน: 12.6 - 6.0 = 6.6", "คำตอบคือ 6.6"] },
+                    { q: "20.0 ÷ 4 + 3.5 × 2 = ?", opts: [12.0, 11.5, 12.5], ans: 12.0, steps: ["ทำหาร: 5.0 และ ทำคูณ: 7.0", "บวกกัน: 5.0 + 7.0 = 12.0", "คำตอบคือ 12.0"] },
+                    { q: "8.8 - 4.4 ÷ 2 × 3 = ?", opts: [2.2, 6.6, 2.5], ans: 2.2, steps: ["ทำหาร: 4.4 ÷ 2 = 2.2", "ทำคูณ: 2.2 × 3 = 6.6", "ลบกัน: 8.8 - 6.6 = 2.2"] },
+                    { q: "1.5 × 6 - 9.0 ÷ 3 + 2.5 = ?", opts: [8.5, 5.5, 9.0], ans: 8.5, steps: ["ทำคูณ: 9.0 และ ทำหาร: 3.0", "ทำซ้ายไปขวา: 9.0 - 3.0 = 6.0", "6.0 + 2.5 = 8.5"] }
+                ]
+            },
+            {
+                name: "ด่านที่ 8: มหัศจรรย์ทศนิยม 3 ตำแหน่ง",
+                tip: "ความถูกต้องละเอียดสูง อย่าลืมเช็คตำแหน่งทศนิยมตอนผลลัพธ์สุดท้าย",
+                questions: [
+                    { q: "(1.125 + 0.875) × 2.5 = ?", opts: [5.0, 4.5, 5.5], ans: 5.0, steps: ["1.125 + 0.875 = 2.000", "2.0 × 2.5 = 5.0", "คำตอบคือ 5.0"] },
+                    { q: "10.555 - (3.125 + 2.430) = ?", opts: [5.0, 6.0, 4.5], ans: 5.0, steps: ["3.125 + 2.430 = 5.555", "10.555 - 5.555 = 5.000", "คำตอบคือ 5.0"] },
+                    { q: "(0.125 × 8) + 2.55 = ?", opts: [3.55, 3.5, 3.6], ans: 3.55, steps: ["0.125 × 8 = 1.000", "1.0 + 2.55 = 3.55", "คำตอบคือ 3.55"] },
+                    { q: "(15.500 ÷ 5) - 1.100 = ?", opts: [2.0, 2.1, 1.9], ans: 2.0, steps: ["15.500 ÷ 5 = 3.100", "3.100 - 1.100 = 2.000", "คำตอบคือ 2.0"] },
+                    { q: "(4.250 + 5.750) × 0.125 = ?", opts: [1.25, 1.2, 1.3], ans: 1.25, steps: ["4.250 + 5.750 = 10.000", "10.0 × 0.125 = 1.250", "คำตอบคือ 1.25"] },
+                    { q: "8.875 - (2.500 × 3) = ?", opts: [1.375, 1.3, 1.4], ans: 1.375, steps: ["2.500 × 3 = 7.500", "8.875 - 7.500 = 1.375", "คำตอบคือ 1.375"] },
+                    { q: "(9.999 - 4.999) ÷ 2.5 = ?", opts: [2.0, 2.5, 1.5], ans: 2.0, steps: ["9.999 - 4.999 = 5.000", "5.0 ÷ 2.5 = 2.0", "คำตอบคือ 2.0"] },
+                    { q: "1.111 × 9 - 5.999 = ?", opts: [4.0, 3.9, 4.1], ans: 4.0, steps: ["1.111 × 9 = 9.999", "9.999 - 5.999 = 4.000", "คำตอบคือ 4.0"] },
+                    { q: "(12.125 - 2.125) ÷ 1.25 = ?", opts: [8.0, 7.5, 8.5], ans: 8.0, steps: ["12.125 - 2.125 = 10.000", "10.000 ÷ 1.25 = 8.0", "คำตอบคือ 8.0"] },
+                    { q: "(0.375 × 4) + (0.625 × 8) = ?", opts: [6.5, 6.0, 7.0], ans: 6.5, steps: ["0.375 × 4 = 1.500", "0.625 × 8 = 5.000", "1.5 + 5.0 = 6.5"] }
+                ]
+            },
+            {
+                name: "ด่านที่ 9: บทเรียนวงเล็บซ้อนชั้นนอกชั้นใน",
+                tip: "ให้เริ่มเจาะคำนวณจากวงเล็บชั้นที่อยู่ด้านในสุด (วงเล็บย่อย) ก่อนเสมอ",
+                questions: [
+                    { q: "((1.5 + 2.5) × 2) - 3.5 = ?", opts: [4.5, 4.0, 5.0], ans: 4.5, steps: ["วงเล็บใน: 1.5 + 2.5 = 4.0", "วงเล็บนอก: 4.0 × 2 = 8.0", "ภายนอก: 8.0 - 3.5 = 4.5"] },
+                    { q: "15.0 - ((4.8 ÷ 2) + 2.6) = ?", opts: [10.0, 9.5, 10.5], ans: 10.0, steps: ["วงเล็บใน: 4.8 ÷ 2 = 2.4", "วงเล็บนอก: 2.4 + 2.6 = 5.0", "ภายนอก: 15.0 - 5.0 = 10.0"] },
+                    { q: "((10.0 - 4.5) × 2) ÷ 1.1 = ?", opts: [10.0, 9.0, 11.0], ans: 10.0, steps: ["วงเล็บใน: 10.0 - 4.5 = 5.5", "วงเล็บนอก: 5.5 × 2 = 11.0", "ภายนอก: 11.0 ÷ 1.1 = 10.0"] },
+                    { q: "20.0 - ((3.5 × 2) + 5.5) = ?", opts: [7.5, 8.0, 7.0], ans: 7.5, steps: ["วงเล็บใน: 3.5 × 2 = 7.0", "วงเล็บนอก: 7.0 + 5.5 = 12.5", "ภายนอก: 20.0 - 12.5 = 7.5"] },
+                    { q: "(((6.3 + 3.7) ÷ 5) × 4) = ?", opts: [8.0, 6.0, 10.0], ans: 8.0, steps: ["วงเล็บในสุด: 6.3 + 3.7 = 10.0", "ถัดมา: 10.0 ÷ 5 = 2.0", "คูณ 4: 2.0 × 4 = 8.0"] },
+                    { q: "12.5 + ((15.5 - 5.5) ÷ 4) = ?", opts: [15.0, 14.5, 15.5], ans: 15.0, steps: ["วงเล็บใน: 15.5 - 5.5 = 10.0", "วงเล็บนอก: 10.0 ÷ 4 = 2.5", "ภายนอก: 12.5 + 2.5 = 15.0"] },
+                    { q: "((8.4 ÷ 2) × 3) - 6.6 = ?", opts: [6.0, 5.5, 6.5], ans: 6.0, steps: ["วงเล็บใน: 8.4 ÷ 2 = 4.2", "วงเล็บนอก: 4.2 × 3 = 12.6", "ภายนอก: 12.6 - 6.6 = 6.0"] },
+                    { q: "25.0 - (((4.5 + 1.5) × 3) + 2.0) = ?", opts: [5.0, 4.5, 5.5], ans: 5.0, steps: ["วงเล็บในสุด: 4.5 + 1.5 = 6.0", "ถัดมา: 6.0 × 3 + 2.0 = 20.0", "ภายนอก: 25.0 - 20.0 = 5.0"] },
+                    { q: "(((12.6 ÷ 3) + 1.8) × 2) = ?", opts: [12.0, 11.0, 13.0], ans: 12.0, steps: ["วงเล็บในสุด: 12.6 ÷ 3 = 4.2", "ถัดมา: 4.2 + 1.8 = 6.0", "คูณ 2: 6.0 × 2 = 12.0"] },
+                    { q: "30.0 - ((25.5 - 5.5) ÷ 2) = ?", opts: [20.0, 18.0, 22.0], ans: 20.0, steps: ["วงเล็บใน: 25.5 - 5.5 = 20.0", "วงเล็บนอก: 20.0 ÷ 2 = 10.0", "ภายนอก: 30.0 - 10.0 = 20.0"] }
+                ]
+            },
+            {
+                name: "ด่านที่ 10: มหาสงครามทศนิยมปราบเซียน",
+                tip: "ด่านสุดท้ายสุดท้าทายตามเป้าหมายของวิทยากรชั้นเอก! จงนิ่งสงบและค่อย ๆ คิดทีละก้าว",
+                questions: [
+                    { q: "((1.2 × 5) + (2.4 ÷ 2)) × 2.5 = ?", opts: [18.0, 17.5, 19.0], ans: 18.0, steps: ["1.2 × 5 = 6.0 และ 2.4 ÷ 2 = 1.2", "6.0 + 1.2 = 7.2", "7.2 × 2.5 = 18.0"] },
+                    { q: "(25.5 - (3.5 × 4)) ÷ 2.3 = ?", opts: [5.0, 4.5, 5.5], ans: 5.0, steps: ["3.5 × 4 = 14.0", "25.5 - 14.0 = 11.5", "11.5 ÷ 2.3 = 5.0"] },
+                    { q: "((9.6 ÷ 3) + 1.8) × (1.5 × 2) = ?", opts: [15.0, 14.0, 16.0], ans: 15.0, steps: ["(9.6÷3)+1.8 = 5.0", "(1.5×2) = 3.0", "5.0 × 3.0 = 15.0"] },
+                    { q: "50.0 - ((12.5 + 7.5) × 1.5) × 0.5 = ?", opts: [35.0, 30.0, 40.0], ans: 35.0, steps: ["12.5 + 7.5 = 20.0", "20.0 × 1.5 = 30.0", "50.0 - 30.0 × 0.5 = 50.0 - 15.0 = 35.0"] },
+                    { q: "((1.5 × 8) - (12.8 ÷ 4)) + 3.2 = ?", opts: [12.0, 11.8, 12.2], ans: 12.0, steps: ["1.5 × 8 = 12.0", "12.8 ÷ 4 = 3.2", "12.0 - 3.2 + 3.2 = 12.0"] },
+                    { q: "(100.0 - (45.5 × 2)) ÷ (1.5 + 1.0) = ?", opts: [3.6, 4.0, 3.2], ans: 3.6, steps: ["45.5 × 2 = 91.0", "100.0 - 91.0 = 9.0", "9.0 ÷ 2.5 = 3.6"] },
+                    { q: "((8.8 ÷ 4) × 5) - (1.2 × 4) = ?", opts: [6.2, 5.8, 6.5], ans: 6.2, steps: ["8.8 ÷ 4 × 5 = 11.0", "1.2 × 4 = 4.8", "11.0 - 4.8 = 6.2"] },
+                    { q: "15.0 + ((2.4 × 5) - 6.0) ÷ 1.5 = ?", opts: [19.0, 18.0, 20.0], ans: 19.0, steps: ["2.4 × 5 = 12.0", "12.0 - 6.0 = 6.0", "15.0 + 6.0 ÷ 1.5 = 15.0 + 4.0 = 19.0"] },
+                    { q: "((25.8 - 5.8) ÷ 4) × (1.1 × 10) = ?", opts: [55.0, 50.0, 60.0], ans: 55.0, steps: ["25.8 - 5.8 = 20.0", "20.0 ÷ 4 = 5.0", "5.0 × (1.1 × 10) = 5.0 × 11 = 55.0"] },
+                    { q: "(((1.25 × 8) + 2.5) ÷ 2.5) × 3.5 = ?", opts: [17.5, 15.0, 20.0], ans: 17.5, steps: ["1.25 × 8 = 10.00", "10.0 + 2.5 = 12.5", "12.5 ÷ 2.5 × 3.5 = 5.0 × 3.5 = 17.5"] }
+                ]
+            }
+        ];
+
+        let currentLevelIndex = 0;       
+        let currentQuestionIndex = 0;    
+        let score = 0;
+        let useCamera = true;
+        let videoElement;
+        let canvasElement;
+        let canvasCtx;
+        let handsTracker;
+        let cameraUtils;
+        let activeHoverElement = null;
+        let hoverStartTime = null;
+        const HOVER_THRESHOLD = 1500;
+        let gameActive = false;
+        let isProcessingAnswer = false; // Prevents spam-clicks / double triggers
+
+        let answerButtons = [];
+        let mouseX = 0, mouseY = 0, isMouseDown = false;
+        let audioCtx = null;
+
+        levels.forEach(level => {
+            level.questions.forEach(q => {
+                const uniqueOpts = new Set(q.opts);
+                uniqueOpts.add(q.ans);
+                
+                // Add mathematically plausible distractors until we reach exactly 5 choices
+                while (uniqueOpts.size < 5) {
+                    let offset = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 5) + 1) * 0.5;
+                    if (q.ans % 1 !== 0) {
+                        offset = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 5) + 1) * 0.25;
+                    }
+                    let candidate = Number((q.ans + offset).toFixed(3));
+                    if (candidate > 0 && !uniqueOpts.has(candidate)) {
+                        uniqueOpts.add(candidate);
+                    }
+                }
+                q.opts = Array.from(uniqueOpts).sort((a, b) => a - b);
+            });
+        });
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playCorrectSound() {
+            if (!audioCtx) return;
+            try {
+                const osc1 = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                osc1.type = 'sine';
+                osc2.type = 'triangle';
+                osc1.connect(gainNode);
+                osc2.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                const now = audioCtx.currentTime;
+                osc1.frequency.setValueAtTime(523.25, now); 
+                osc1.frequency.setValueAtTime(659.25, now + 0.1); 
+                osc1.frequency.setValueAtTime(783.99, now + 0.2); 
+                osc2.frequency.setValueAtTime(1046.50, now); 
+                
+                gainNode.gain.setValueAtTime(0.15, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+                
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.45);
+                osc2.stop(now + 0.45);
+            } catch (e) {
+                console.warn("Audio exception:", e);
+            }
+        }
+
+        function playWrongSound() {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                const now = audioCtx.currentTime;
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.linearRampToValueAtTime(75, now + 0.35);
+                
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } catch (e) {
+                console.warn("Audio exception:", e);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            videoElement = document.getElementById('webcam');
+            canvasElement = document.getElementById('ar-canvas');
+            canvasCtx = canvasElement.getContext('2d');
+            
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            buildLevelGridUI();
+
+            canvasElement.addEventListener('mousemove', (e) => {
+                const rect = canvasElement.getBoundingClientRect();
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+            });
+
+            canvasElement.addEventListener('mousedown', () => { isMouseDown = true; });
+            canvasElement.addEventListener('mouseup', () => { isMouseDown = false; });
+            
+            canvasElement.addEventListener('touchstart', (e) => {
+                if (e.touches[0]) {
+                    const rect = canvasElement.getBoundingClientRect();
+                    mouseX = e.touches[0].clientX - rect.left;
+                    mouseY = e.touches[0].clientY - rect.top;
+                    isMouseDown = true;
+                }
+            });
+            canvasElement.addEventListener('touchend', () => { isMouseDown = false; });
+        });
+
+        function resizeCanvas() {
+            if (canvasElement) {
+                canvasElement.width = canvasElement.parentElement.clientWidth;
+                canvasElement.height = canvasElement.parentElement.clientHeight;
+                setupAnswerButtonLocations();
+            }
+        }
+
+        function setupAnswerButtonLocations() {
+            const w = canvasElement.width;
+            const h = canvasElement.height;
+            
+            // Adjust dimensions slightly to fit all 5 elegantly
+            const btnW = Math.min(130, w * 0.18);
+            const btnH = Math.min(55, h * 0.13);
+
+            answerButtons = [];
+
+            // Row 1: 3 buttons
+            const spacingRow1 = (w - (btnW * 3)) / 4;
+            const yRow1 = h * 0.60;
+            for (let i = 0; i < 3; i++) {
+                answerButtons.push({
+                    id: i,
+                    x: spacingRow1 + i * (btnW + spacingRow1),
+                    y: yRow1,
+                    width: btnW,
+                    height: btnH,
+                    value: null
+                });
+            }
+
+            // Row 2: 2 buttons (centered)
+            const spacingRow2 = (w - (btnW * 2)) / 3;
+            const yRow2 = h * 0.76;
+            for (let i = 0; i < 2; i++) {
+                answerButtons.push({
+                    id: i + 3,
+                    x: spacingRow2 + i * (btnW + spacingRow2),
+                    y: yRow2,
+                    width: btnW,
+                    height: btnH,
+                    value: null
+                });
+            }
+        }
+
+        function buildLevelGridUI() {
+            const grid = document.getElementById('level-dots-grid');
+            grid.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const btn = document.createElement('div');
+                btn.id = `level-dot-${i}`;
+                btn.className = `p-2.5 rounded-xl flex flex-col items-center justify-center font-bold text-xs transition duration-200 cursor-pointer ${
+                    i === 0 ? 'bg-blue-600 text-white border-2 border-blue-400' : 'bg-slate-800 text-slate-500'
+                }`;
+                btn.innerHTML = `<span class="opacity-70 text-[9px] uppercase tracking-wider block">ด่านหลัก ${i+1}</span><span class="text-sm font-extrabold mt-0.5">0/10 ข้อ</span>`;
+                btn.onclick = () => {
+                    if (gameActive) jumpToLevel(i);
+                };
+                grid.appendChild(btn);
+            }
+        }
+
+        function startGame() {
+            initAudio();
+            document.getElementById('start-modal').classList.add('hidden');
+            gameActive = true;
+            currentLevelIndex = 0;
+            currentQuestionIndex = 0;
+            score = 0;
+            updateUI();
+            loadQuestion(currentLevelIndex, currentQuestionIndex);
+            initCamera();
+        }
+
+        function resetGame() {
+            document.getElementById('victory-modal').classList.add('hidden');
+            document.getElementById('start-modal').classList.remove('hidden');
+            gameActive = false;
+            currentLevelIndex = 0;
+            currentQuestionIndex = 0;
+            score = 0;
+            updateUI();
+            buildLevelGridUI();
+        }
+
+        function loadQuestion(lvlIdx, questIdx) {
+            if (lvlIdx >= levels.length) {
+                triggerVictory();
+                return;
+            }
+
+            const activeChapter = levels[lvlIdx];
+            const currentQuestion = activeChapter.questions[questIdx];
+
+            document.getElementById('active-question').innerText = currentQuestion.q;
+            document.getElementById('current-chapter-name').innerText = activeChapter.name;
+            document.getElementById('current-level-indicator').innerText = `ข้อที่ ${questIdx + 1} / 10`;
+            document.getElementById('pedagogy-tip').innerText = `"${activeChapter.tip}"`;
+
+            document.getElementById('step-1-text').innerText = currentQuestion.steps[0] || "-";
+            document.getElementById('step-2-text').innerText = currentQuestion.steps[1] || "-";
+            document.getElementById('step-3-text').innerText = currentQuestion.steps[2] || "-";
+
+            setupAnswerButtonLocations();
+            for (let i = 0; i < 5; i++) {
+                if (answerButtons[i]) {
+                    answerButtons[i].value = currentQuestion.opts[i];
+                }
+            }
+
+            const subIndicatorContainer = document.getElementById('sub-question-indicators');
+            subIndicatorContainer.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const indicatorDot = document.createElement('span');
+                indicatorDot.className = `w-2 h-2 rounded-full transition-all duration-300 ${
+                    i === questIdx ? 'bg-cyan-400 scale-125 ring-2 ring-white/50' : i < questIdx ? 'bg-green-500' : 'bg-slate-700'
+                }`;
+                subIndicatorContainer.appendChild(indicatorDot);
+            }
+
+            for (let i = 0; i < 10; i++) {
+                const card = document.getElementById(`level-dot-${i}`);
+                if (card) {
+                    if (i === lvlIdx) {
+                        card.className = 'p-2.5 rounded-xl flex flex-col items-center justify-center font-bold text-xs bg-blue-600 text-white border-2 border-cyan-400 scale-105';
+                        card.innerHTML = `<span class="opacity-70 text-[9px] uppercase tracking-wider block">ด่านหลัก ${i+1}</span><span class="text-sm font-extrabold mt-0.5">${questIdx}/10 ข้อ</span>`;
+                    } else if (i < lvlIdx) {
+                        card.className = 'p-2.5 rounded-xl flex flex-col items-center justify-center font-bold text-xs bg-green-900 text-green-300 border border-green-700';
+                        card.innerHTML = `<span class="opacity-70 text-[9px] uppercase tracking-wider block">ด่านหลัก ${i+1}</span><span class="text-sm font-extrabold mt-0.5">ผ่านแล้ว!</span>`;
+                    } else {
+                        card.className = 'p-2.5 rounded-xl flex flex-col items-center justify-center font-bold text-xs bg-slate-800 text-slate-500';
+                        card.innerHTML = `<span class="opacity-70 text-[9px] uppercase tracking-wider block">ด่านหลัก ${i+1}</span><span class="text-sm font-extrabold mt-0.5">ยังไม่ถึง</span>`;
+                    }
+                }
+            }
+
+            const totalAnswered = (lvlIdx * 10) + questIdx;
+            const overallPercent = (totalAnswered / 100) * 100;
+            document.getElementById('game-progress-bar').style.width = `${overallPercent === 0 ? 1 : overallPercent}%`;
+            document.getElementById('overall-percent-text').innerText = `คืบหน้าภาพรวม: ${totalAnswered} / 100 ข้อ (${overallPercent.toFixed(0)}%)`;
+
+            speakProfessor(`โจทย์ข้อที่ ${questIdx + 1} เริ่มแล้ว วิเคราะห์ตัวเลือกทั้ง 5 ให้ดีก่อนตอบครับ!`);
+        }
+
+        function speakProfessor(text) {
+            document.getElementById('professor-speech').innerText = `"${text}"`;
+        }
+
+        function jumpToLevel(idx) {
+            currentLevelIndex = idx;
+            currentQuestionIndex = 0;
+            loadQuestion(currentLevelIndex, currentQuestionIndex);
+        }
+
+        function skipQuestion() {
+            proceedToNextQuestion();
+        }
+
+        function initCamera() {
+            if (!useCamera) {
+                showCameraFallback();
+                return;
+            }
+
+            document.getElementById('camera-status-dot').className = 'w-2.5 h-2.5 rounded-full bg-yellow-500 animate-ping';
+            document.getElementById('camera-status-text').innerText = "กำลังเข้าถึงกล้อง...";
+
+            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+                .then((stream) => {
+                    videoElement.srcObject = stream;
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play();
+                        setupMediaPipe();
+                    };
+                })
+                .catch((err) => {
+                    console.warn("Camera fallback triggered:", err);
+                    showCameraFallback();
+                });
+        }
+
+        function showCameraFallback() {
+            useCamera = false;
+            document.getElementById('camera-status-dot').className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+            document.getElementById('camera-status-text').innerText = "โหมดเล่นผ่านเมาส์";
+            document.getElementById('camera-fallback-msg').classList.remove('hidden');
+            requestAnimationFrame(renderLoop);
+        }
+
+        function requestCameraAccess() {
+            useCamera = true;
+            document.getElementById('camera-fallback-msg').classList.add('hidden');
+            initCamera();
+        }
+
+        function toggleCameraControl() {
+            const btn = document.getElementById('toggle-camera-btn');
+            if (useCamera) {
+                useCamera = false;
+                btn.innerHTML = '<i class="fa-solid fa-camera"></i> เปิดกล้องเพื่อเล่นด้วยมือ';
+                showCameraFallback();
+            } else {
+                useCamera = true;
+                btn.innerHTML = '<i class="fa-solid fa-video-slash"></i> ปิดกล้อง / เล่นด้วยเมาส์';
+                document.getElementById('camera-fallback-msg').classList.add('hidden');
+                initCamera();
+            }
+        }
+
+        function setupMediaPipe() {
+            handsTracker = new Hands({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+            });
+
+            handsTracker.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            handsTracker.onResults(onHandResults);
+
+            cameraUtils = new Camera(videoElement, {
+                onFrame: async () => {
+                    if (useCamera && gameActive) {
+                        await handsTracker.send({ image: videoElement });
+                    }
+                },
+                width: 640,
+                height: 480
+            });
+
+            cameraUtils.start()
+                .then(() => {
+                    document.getElementById('camera-status-dot').className = 'w-2.5 h-2.5 rounded-full bg-green-500';
+                    document.getElementById('camera-status-text').innerText = "ระบบจับมือทำงานปกติ";
+                })
+                .catch(() => {
+                    showCameraFallback();
+                });
+        }
+
+        let latestHandResults = null;
+        function onHandResults(results) {
+            latestHandResults = results;
+            requestAnimationFrame(renderLoop);
+        }
+
+        function renderLoop() {
+            const w = canvasElement.width;
+            const h = canvasElement.height;
+
+            canvasCtx.clearRect(0, 0, w, h);
+            
+            if (useCamera && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                canvasCtx.save();
+                canvasCtx.translate(w, 0);
+                canvasCtx.scale(-1, 1);
+                canvasCtx.drawImage(videoElement, 0, 0, w, h);
+                canvasCtx.restore();
+            } else {
+                canvasCtx.fillStyle = '#0f172a';
+                canvasCtx.fillRect(0, 0, w, h);
+                canvasCtx.strokeStyle = 'rgba(51,65,85,0.3)';
+                canvasCtx.lineWidth = 1;
+                for (let i = 0; i < w; i += 40) {
+                    canvasCtx.beginPath(); canvasCtx.moveTo(i, 0); canvasCtx.lineTo(i, h); canvasCtx.stroke();
+                }
+                for (let i = 0; i < h; i += 40) {
+                    canvasCtx.beginPath(); canvasCtx.moveTo(0, i); canvasCtx.lineTo(w, i); canvasCtx.stroke();
+                }
+            }
+
+            canvasCtx.fillStyle = 'rgba(11, 21, 40, 0.2)';
+            canvasCtx.fillRect(0, 0, w, h);
+
+            let cursorX = mouseX;
+            let cursorY = mouseY;
+            let activeTrackerFound = false;
+
+            if (useCamera && latestHandResults && latestHandResults.multiHandLandmarks && latestHandResults.multiHandLandmarks.length > 0) {
+                const hand = latestHandResults.multiHandLandmarks[0];
+                const indexFingerTip = hand[8];
+                cursorX = (1 - indexFingerTip.x) * w;
+                cursorY = indexFingerTip.y * h;
+                activeTrackerFound = true;
+                drawHandSkeleton(hand, canvasCtx, w, h);
+            }
+
+            let hoveredButton = null;
+            for (let btn of answerButtons) {
+                if (cursorX >= btn.x && cursorX <= btn.x + btn.width &&
+                    cursorY >= btn.y && cursorY <= btn.y + btn.height) {
+                    hoveredButton = btn;
+                    break;
+                }
+            }
+
+            if (hoveredButton !== null && !isProcessingAnswer) {
+                if (activeHoverElement !== hoveredButton) {
+                    activeHoverElement = hoveredButton;
+                    hoverStartTime = Date.now();
+                } else {
+                    const elapsed = Date.now() - hoverStartTime;
+                    let progress = Math.min(1, elapsed / HOVER_THRESHOLD);
+                    drawLoadingRing(canvasCtx, cursorX, cursorY, progress);
+
+                    if (elapsed >= HOVER_THRESHOLD) {
+                        selectAnswer(hoveredButton.value);
+                        activeHoverElement = null;
+                    }
+                }
+            } else {
+                activeHoverElement = null;
+                hoverStartTime = null;
+            }
+
+            if (!useCamera && isMouseDown && hoveredButton && !isProcessingAnswer) {
+                selectAnswer(hoveredButton.value);
+                isMouseDown = false;
+            }
+
+            drawUIOverlays(canvasCtx, cursorX, cursorY, activeTrackerFound);
+
+            if (!useCamera) {
+                requestAnimationFrame(renderLoop);
+            }
+        }
+
+        function drawHandSkeleton(landmarks, ctx, width, height) {
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
+            ctx.strokeStyle = 'rgba(45, 212, 191, 0.5)';
+            ctx.lineWidth = 3;
+
+            const drawJoint = (p1, p2) => {
+                ctx.beginPath();
+                ctx.moveTo((1 - landmarks[p1].x) * width, landmarks[p1].y * height);
+                ctx.lineTo((1 - landmarks[p2].x) * width, landmarks[p2].y * height);
+                ctx.stroke();
+            };
+
+            for (let i = 0; i < 4; i++) drawJoint(i, i+1);
+            for (let i = 5; i < 8; i++) drawJoint(i, i+1);
+            drawJoint(0, 5);
+            drawJoint(5, 9);
+            drawJoint(9, 13);
+            drawJoint(13, 17);
+            drawJoint(0, 17);
+
+            landmarks.forEach((pt, index) => {
+                ctx.beginPath();
+                ctx.arc((1 - pt.x) * width, pt.y * height, index === 8 ? 8 : 4, 0, 2 * Math.PI);
+                ctx.fillStyle = index === 8 ? '#f43f5e' : '#38bdf8';
+                ctx.fill();
+            });
+        }
+
+        function drawLoadingRing(ctx, x, y, progress) {
+            ctx.beginPath();
+            ctx.arc(x, y, 22, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(x, y, 22, -Math.PI / 2, (-Math.PI / 2) + (2 * Math.PI * progress));
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+        }
+
+        function drawUIOverlays(ctx, cursorX, cursorY, trackingActive) {
+            answerButtons.forEach(btn => {
+                const isHovered = activeHoverElement === btn;
+                ctx.save();
+                ctx.shadowColor = isHovered ? 'rgba(45, 212, 191, 0.8)' : 'rgba(59, 130, 246, 0.4)';
+                ctx.shadowBlur = isHovered ? 20 : 8;
+
+                ctx.fillStyle = isHovered ? 'rgba(13, 148, 136, 0.9)' : 'rgba(15, 23, 42, 0.85)';
+                ctx.strokeStyle = isHovered ? '#2dd4bf' : 'rgba(59, 130, 246, 0.6)';
+                ctx.lineWidth = 2.5;
+
+                drawRoundedRect(ctx, btn.x, btn.y, btn.width, btn.height, 12);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `bold ${Math.min(18, btn.width * 0.17)}px 'Chakra Petch'`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(btn.value !== null ? btn.value.toFixed(2).replace(/\.00$/, '') : '...', btn.x + btn.width/2, btn.y + btn.height/2);
+            });
+
+            ctx.save();
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = trackingActive ? '#10b981' : '#f43f5e';
+            ctx.strokeStyle = trackingActive ? '#10b981' : '#f43f5e';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cursorX, cursorY, 12, 0, 2 * Math.PI);
+            ctx.stroke();
+
+            ctx.fillStyle = trackingActive ? '#10b981' : '#f43f5e';
+            ctx.beginPath();
+            ctx.arc(cursorX, cursorY, 4, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawRoundedRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        function selectAnswer(selectedValue) {
+            if (isProcessingAnswer) return;
+            
+            isProcessingAnswer = true;
+            const activeChapter = levels[currentLevelIndex];
+            const currentQuestion = activeChapter.questions[currentQuestionIndex];
+
+            // Math check with safe small epsilon margin
+            if (Math.abs(selectedValue - currentQuestion.ans) < 0.001) {
+                // Correct Answer: green neon flash
+                score += 10;
+                updateUI();
+                playCorrectSound();
+
+                const flashOverlay = document.getElementById('green-flash');
+                flashOverlay.classList.remove('opacity-0');
+                flashOverlay.classList.add('opacity-100');
+                
+                confetti({
+                    particleCount: 50,
+                    spread: 55,
+                    origin: { y: 0.75 }
+                });
+
+                speakProfessor(`ยอดเยี่ยม! คำตอบถูกต้อง: ${currentQuestion.steps[currentQuestion.steps.length - 1]}`);
+
+                setTimeout(() => {
+                    flashOverlay.classList.remove('opacity-100');
+                    flashOverlay.classList.add('opacity-0');
+                    isProcessingAnswer = false;
+                    proceedToNextQuestion();
+                }, 1400);
+
+            } else {
+                // Incorrect Answer: Red overlay flash but transition anyway (One attempt only)
+                playWrongSound();
+
+                const redOverlay = document.getElementById('wrong-flash');
+                redOverlay.classList.remove('opacity-0');
+                redOverlay.classList.add('opacity-100');
+
+                speakProfessor(`ยังไม่ถูกครับ! เฉลยที่ถูกต้องคือ ${currentQuestion.ans}`);
+
+                setTimeout(() => {
+                    redOverlay.classList.remove('opacity-100');
+                    redOverlay.classList.add('opacity-0');
+                    isProcessingAnswer = false;
+                    proceedToNextQuestion();
+                }, 1400);
+            }
+        }
+
+        function proceedToNextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex >= 10) {
+                currentLevelIndex++;
+                currentQuestionIndex = 0;
+            }
+            loadQuestion(currentLevelIndex, currentQuestionIndex);
+        }
+
+        function updateUI() {
+            document.getElementById('hud-score').innerText = `คะแนน: ${score}`;
+        }
+
+        function triggerVictory() {
+            gameActive = false;
+            document.getElementById('victory-modal').classList.remove('hidden');
+            document.getElementById('final-score').innerText = `${score} / 1000`;
+            
+            let end = Date.now() + (4 * 1000);
+            (function frame() {
+                confetti({
+                    particleCount: 6,
+                    angle: 60,
+                    spread: 60,
+                    origin: { x: 0 }
+                });
+                confetti({
+                    particleCount: 6,
+                    angle: 120,
+                    spread: 60,
+                    origin: { x: 1 }
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+        window.startGame = startGame;
+        window.resetGame = resetGame;
+        window.toggleCameraControl = toggleCameraControl;
+        window.requestCameraAccess = requestCameraAccess;
+        window.skipQuestion = skipQuestion;
+        window.initAudio = initAudio;
+        window.jumpToLevel = jumpToLevel;
+    </script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decimal Master AR - คณิตศาสตร์ทศนิยม ป.6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Inter', sans-serif; }
+        #camera-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        #video-background { width: 100%; height: 100%; object-fit: cover; }
+        
+        #ui-overlay { position: absolute; bottom: 0; left: 0; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; padding-bottom: 20px; pointer-events: none; }
+        .game-panel { pointer-events: auto; background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 20px 20px 0 0; box-shadow: 0 -10px 25px rgba(0,0,0,0.2); text-align: center; width: 100%; max-width: 800px; }
+        
+        .btn-option { transition: transform 0.1s, background 0.2s; border: 2px solid #e2e8f0; }
+        .btn-option:hover { transform: scale(1.02); }
+        
+        .flash-green { animation: flashGreen 0.5s; }
+        .flash-red { animation: flashRed 0.5s; }
+        @keyframes flashGreen { 0% { background: white; } 50% { background: #4ade80; } 100% { background: white; } }
+        @keyframes flashRed { 0% { background: white; } 50% { background: #f87171; } 100% { background: white; } }
+    </style>
+</head>
+<body>
+    <div id="camera-container">
+        <video id="video-background" autoplay playsinline muted></video>
+    </div>
+
+    <div id="ui-overlay">
+        <div id="game-panel" class="game-panel">
+            <h1 class="text-xl font-bold mb-1">Decimal Master AR</h1>
+            <p id="progress-text" class="text-sm text-gray-600 mb-3">ด่านที่ 1 | ข้อที่ 1/20 | คะแนน 0/0</p>
+            <div id="question" class="text-3xl md:text-5xl font-mono font-bold mb-4 py-3 bg-gray-100 rounded-lg text-blue-900">---</div>
+            <div id="options-grid" class="grid grid-cols-2 md:grid-cols-5 gap-2"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentLevel = 1;
+        let currentQuestion = 1;
+        let currentScore = 0;
+        const totalLevels = 10;
+        const questionsPerLevel = 20;
+
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        facingMode: "user"
+                    }
+                });
+                const video = document.getElementById('video-background');
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Camera access denied:", err);
+            }
+        }
+
+        function generateProblem() {
+            let result = -1;
+            let questionStr = "";
+            
+            while (result <= 0) {
+                const a = (Math.random() * 900 + 10).toFixed(3);
+                const b = (Math.random() * 900 + 10).toFixed(3);
+                const c = (Math.random() * 900 + 10).toFixed(3);
+                
+                const ops = ['+', '-'];
+                const op1 = ops[Math.floor(Math.random() * ops.length)];
+                const op2 = ops[Math.floor(Math.random() * ops.length)];
+                
+                questionStr = `${a} ${op1} ${b} ${op2} ${c}`;
+                result = eval(questionStr);
+            }
+            
+            return {
+                text: `${questionStr.replace('+', ' + ').replace('-', ' - ')} = ?`,
+                answer: parseFloat(result.toFixed(3))
+            };
+        }
+
+        function updateGameUI() {
+            const problem = generateProblem();
+            document.getElementById('question').innerText = problem.text;
+            document.getElementById('progress-text').innerText = `ด่านที่ ${currentLevel} | ข้อที่ ${currentQuestion}/${questionsPerLevel} | คะแนน ${currentScore}/${currentQuestion-1 > 0 ? currentQuestion-1 : 0}`;
+            
+            const grid = document.getElementById('options-grid');
+            grid.innerHTML = '';
+            
+            let options = [problem.answer];
+            while (options.length < 5) {
+                let fake = parseFloat((problem.answer + (Math.random() * 20 - 10)).toFixed(3));
+                if (fake > 0 && !options.includes(fake)) {
+                    options.push(fake);
+                }
+            }
+            options.sort(() => Math.random() - 0.5);
+            
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-option p-3 bg-white rounded-lg text-lg font-bold hover:bg-blue-50 cursor-pointer";
+                btn.innerText = opt.toFixed(3);
+                btn.onclick = () => checkAnswer(opt, btn, problem.answer);
+                grid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, element, correct) {
+            const panel = document.getElementById('game-panel');
+            if (selected === correct) {
+                currentScore++;
+                panel.classList.add('flash-green');
+                setTimeout(() => panel.classList.remove('flash-green'), 500);
+            } else {
+                panel.classList.add('flash-red');
+                setTimeout(() => panel.classList.remove('flash-red'), 500);
+            }
+            
+            setTimeout(nextQuestion, 600);
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            if (currentQuestion > questionsPerLevel) {
+                const finalScore = currentScore;
+                document.getElementById('question').innerText = `สรุปผลด่าน ${currentLevel}: ${finalScore}/${questionsPerLevel} คะแนน`;
+                
+                // Reset for next level
+                currentLevel++;
+                currentQuestion = 1;
+                currentScore = 0;
+                
+                if (currentLevel > totalLevels) {
+                    currentLevel = 1;
+                }
+                
+                setTimeout(updateGameUI, 2000);
+            } else {
+                updateGameUI();
+            }
+        }
+
+        window.onload = () => {
+            initCamera();
+            updateGameUI();
+        };
+    </script>
+</body>
+</html>

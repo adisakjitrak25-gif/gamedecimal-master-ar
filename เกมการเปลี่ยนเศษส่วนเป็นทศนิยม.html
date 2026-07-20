@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Master AR: Grade 6 Level 1-10</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Inter', sans-serif; }
+        #video-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+        .glass-panel { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(15px); border-top: 1px solid rgba(255,255,255,0.1); }
+        .flash-green { animation: flash-green 0.5s ease-out; }
+        .flash-red { animation: flash-red 0.5s ease-out; }
+        @keyframes flash-green { 0% { background: rgba(0,0,0,0.4); } 50% { background: rgba(34, 197, 94, 0.5); } 100% { background: rgba(0,0,0,0.4); } }
+        @keyframes flash-red { 0% { background: rgba(0,0,0,0.4); } 50% { background: rgba(239, 68, 68, 0.5); } 100% { background: rgba(0,0,0,0.4); } }
+        .btn-hover { transition: all 0.2s; }
+        .btn-hover:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+    <video id="video-background" autoplay playsinline></video>
+
+    <div id="game-container" class="absolute bottom-0 w-full z-10 glass-panel p-3">
+        <div class="max-w-xl mx-auto flex flex-col gap-2">
+            <div class="flex justify-between items-center px-1">
+                <h1 class="text-[10px] font-black tracking-widest text-blue-400 uppercase">
+                    Lv <span id="level-num">1</span> | Q <span id="q-num">1</span>/20
+                </h1>
+                <div class="text-[10px] font-bold text-white/80 bg-white/10 px-2 py-0.5 rounded-full">
+                    Score: <span id="score-num">0</span>/20
+                </div>
+            </div>
+
+            <div class="text-center py-1">
+                <div class="text-4xl font-black tracking-tighter text-white drop-shadow-lg" id="fraction-display">--/--</div>
+            </div>
+
+            <div id="answer-grid" class="grid grid-cols-5 gap-1 w-full"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentLevel = 1;
+        let currentIdx = 0;
+        let score = 0;
+        let questions = [];
+
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                document.getElementById('video-background').srcObject = stream;
+            } catch (err) { console.error("Camera error:", err); }
+        }
+
+        const levelConfig = [
+            [2, 4, 5, 10], [2, 4, 5, 8, 10], [2, 4, 5, 8, 10, 20], [4, 5, 8, 20, 25],
+            [5, 8, 20, 25, 40], [8, 20, 25, 40, 50], [8, 25, 40, 50, 125],
+            [20, 25, 40, 50, 125], [25, 40, 50, 125, 16], [40, 50, 125, 16, 200]
+        ];
+
+        function generateQuestions() {
+            const denominators = levelConfig[currentLevel - 1];
+            const qSet = new Set();
+            while(qSet.size < 20) {
+                const den = denominators[Math.floor(Math.random() * denominators.length)];
+                const num = Math.floor(Math.random() * (den * 4)) + 1;
+                const val = (num / den).toFixed(3).replace(/\.?0+$/, "");
+                const key = `${num}/${den}`;
+                
+                if(![...qSet].some(q => q.key === key)) {
+                    const choices = [val];
+                    while(choices.length < 5) {
+                        const wrong = ((Math.random() * 4) + 0.1).toFixed(3).replace(/\.?0+$/, "");
+                        if(!choices.includes(wrong) && wrong !== val) choices.push(wrong);
+                    }
+                    qSet.add({key, num, den, correct: val, choices: choices.sort(() => Math.random() - 0.5)});
+                }
+            }
+            questions = Array.from(qSet);
+            score = 0;
+        }
+
+        function render() {
+            document.getElementById('level-num').innerText = currentLevel;
+            document.getElementById('q-num').innerText = currentIdx + 1;
+            document.getElementById('score-num').innerText = score;
+            const q = questions[currentIdx];
+            document.getElementById('fraction-display').innerText = `${q.num} / ${q.den}`;
+            const grid = document.getElementById('answer-grid');
+            grid.innerHTML = '';
+            q.choices.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = "btn-hover p-2 rounded-lg text-sm font-bold text-white bg-white/10 hover:bg-white/30 border border-white/20";
+                btn.innerText = c;
+                btn.onclick = () => check(c);
+                grid.appendChild(btn);
+            });
+        }
+
+        function check(ans) {
+            const panel = document.getElementById('game-container');
+            const grid = document.getElementById('answer-grid');
+            
+            if (ans === questions[currentIdx].correct) {
+                panel.classList.add('flash-green');
+                score++;
+                setTimeout(() => panel.classList.remove('flash-green'), 500);
+            } else {
+                panel.classList.add('flash-red');
+                setTimeout(() => panel.classList.remove('flash-red'), 500);
+            }
+
+            document.getElementById('score-num').innerText = score;
+            grid.innerHTML = `
+                <button class="col-span-5 bg-blue-600 py-2 rounded-lg text-sm font-bold text-white border-b-2 border-blue-800 animate-pulse" onclick="next()">
+                    ข้อถัดไป ➔
+                </button>`;
+        }
+
+        function next() {
+            currentIdx++;
+            if (currentIdx >= 20) {
+                currentLevel++;
+                if (currentLevel > 10) currentLevel = 1;
+                currentIdx = 0;
+                generateQuestions();
+            }
+            render();
+        }
+
+        window.onload = () => {
+            initCamera();
+            generateQuestions();
+            render();
+        };
+    </script>
+</body>
+</html>

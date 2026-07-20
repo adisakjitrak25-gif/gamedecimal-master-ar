@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สสวท. ทศนิยมระดับประลัย ป.6</title>
+    <!-- Tailwind CSS for modern aesthetics -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons for clean vector representation -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts: Kanit and Sarabun for official Thai curriculum look -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Tone.js for high-fidelity audio synthesis without external media dependency -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        body {
+            font-family: 'Kanit', 'Sarabun', sans-serif;
+            background-color: #020617;
+        }
+
+        /* Custom neon shadows and glows */
+        .neon-shadow-correct {
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+        }
+        .neon-shadow-incorrect {
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+        }
+        .neon-border-blue {
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        /* Flash animations */
+        .pulse-correct {
+            animation: correctFlash 0.4s ease-out 3;
+        }
+        .pulse-incorrect {
+            animation: incorrectFlash 0.4s ease-out 3;
+        }
+
+        @keyframes correctFlash {
+            0%, 100% {
+                background-color: rgba(16, 185, 129, 0);
+                box-shadow: inset 0 0 0px rgba(16, 185, 129, 0);
+            }
+            50% {
+                background-color: rgba(16, 185, 129, 0.2);
+                box-shadow: inset 0 0 100px rgba(16, 185, 129, 0.7);
+            }
+        }
+
+        @keyframes incorrectFlash {
+            0%, 100% {
+                background-color: rgba(239, 68, 68, 0);
+                box-shadow: inset 0 0 0px rgba(239, 68, 68, 0);
+            }
+            50% {
+                background-color: rgba(239, 68, 68, 0.2);
+                box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.7);
+            }
+        }
+
+        /* Transition for layout adjustments in Fullscreen */
+        #interactive-container.virtual-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999 !important;
+            background-color: #020617 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border: none !important;
+            border-radius: 0px !important;
+        }
+
+        #interactive-container.virtual-fullscreen #motion-canvas {
+            width: auto !important;
+            height: 100vh !important;
+            aspect-ratio: 4 / 3 !important;
+            max-width: 100vw !important;
+            object-fit: cover !important;
+        }
+
+        /* Smooth visual progression bars */
+        .motion-hit-fill {
+            transition: width 100ms linear;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased">
+
+    <!-- Top Nav Header -->
+    <header class="border-b border-slate-800/80 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-tr from-emerald-500 to-teal-500 p-2.5 rounded-2xl shadow-lg">
+                    <i data-lucide="calculator" class="w-6 h-6 text-slate-950"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400 bg-clip-text text-transparent">
+                        สสวท. ทศนิยมระดับประลัย
+                    </h1>
+                    <p class="text-xs text-slate-400 font-medium tracking-wide">
+                        นวัตกรรมกล้องคอมพิวเตอร์วิทัศน์สำหรับนักเรียนชั้นประถมศึกษาปีที่ 6
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-700/50">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-semibold text-slate-300" id="detection-status-text">ตรวจพบกล้อง</span>
+                </div>
+                <button id="sound-toggle" class="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl border border-slate-700/50 transition-all">
+                    <i data-lucide="volume-2" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left Column: Dashboards & Learning Analytics (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-5">
+            
+            <!-- Academic Stats Board -->
+            <div class="bg-slate-900/60 rounded-3xl p-5 border border-slate-800/80 backdrop-blur-sm shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-slate-400 text-sm font-semibold tracking-wider flex items-center gap-1.5 uppercase">
+                        <i data-lucide="trophy" class="w-4 h-4 text-amber-500"></i> สถิติการประเมิน
+                    </h3>
+                    <span class="text-xs bg-slate-800 px-2.5 py-1 rounded-full text-slate-400 border border-slate-700/40">
+                        ด่านละ 20 ข้อ
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-950/40 rounded-2xl p-3 border border-slate-800/50 flex flex-col justify-between">
+                        <span class="text-slate-500 text-xs">ด่านปัจจุบัน</span>
+                        <div class="flex items-baseline gap-1 mt-1">
+                            <span class="text-3xl font-black text-sky-400" id="current-level">1</span>
+                            <span class="text-slate-500 text-sm">/ 10</span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/40 rounded-2xl p-3 border border-slate-800/50 flex flex-col justify-between">
+                        <span class="text-slate-500 text-xs">คะแนนที่ได้</span>
+                        <div class="flex items-baseline gap-1 mt-1">
+                            <span class="text-3xl font-black text-emerald-400" id="score-text">0</span>
+                            <span class="text-slate-500 text-sm">/ 20</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress indicators -->
+                <div class="mt-4">
+                    <div class="flex justify-between text-xs font-semibold text-slate-400 mb-1.5">
+                        <span>ความคืบหน้าของด่านนี้</span>
+                        <span id="progress-ratio">0 / 20 ข้อ</span>
+                    </div>
+                    <div class="w-full bg-slate-950 rounded-full h-3.5 p-0.5 border border-slate-800/80">
+                        <div id="level-progress-bar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Question Grid History Tracker -->
+                <div class="mt-5">
+                    <span class="text-xs font-bold text-slate-400 block mb-2">ประวัติการตอบประจำด่าน</span>
+                    <div class="grid grid-cols-10 gap-2" id="history-grid">
+                        <!-- Dots rendered by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Learning Solutions Board / Interactive Help Card -->
+            <div id="solution-box" class="bg-slate-900/60 rounded-3xl p-6 border border-slate-800/80 backdrop-blur-sm shadow-xl flex-grow flex flex-col justify-center min-h-[220px] transition-all duration-300">
+                <div class="text-center py-6 text-slate-500" id="solution-placeholder">
+                    <div class="mx-auto w-12 h-12 rounded-full border-2 border-dashed border-slate-700 flex items-center justify-center mb-3">
+                        <i data-lucide="help-circle" class="w-6 h-6 text-slate-500"></i>
+                    </div>
+                    <p class="text-sm font-medium">ทำโจทย์เพื่อดูผลลัพธ์ขั้นตอนวิธีการคิดตามแนว สสวท. ประยุกต์</p>
+                    <p class="text-xs text-slate-600 mt-1">ระบบกล้องจะแสดงผลคำอธิบายเมื่อตอบถูกต้องเท่านั้น</p>
+                </div>
+                <div class="hidden flex-col h-full" id="solution-content">
+                    <h4 class="text-emerald-400 font-bold flex items-center gap-2 text-md mb-2">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i>
+                        การคิดวิเคราะห์ขั้นตอนวิธีคิด (สสวท.)
+                    </h4>
+                    <div class="space-y-3 flex-grow overflow-y-auto pr-1" id="solution-steps">
+                        <!-- Step components dynamic -->
+                    </div>
+                </div>
+                <div class="hidden flex-col items-center justify-center text-center py-6" id="solution-failed-box">
+                    <div class="mx-auto w-14 h-14 rounded-full bg-red-950/50 border border-red-500/30 flex items-center justify-center mb-3 text-red-400">
+                        <i data-lucide="alert-triangle" class="w-7 h-7"></i>
+                    </div>
+                    <h4 class="text-red-400 font-bold text-md mb-1">คำตอบยังไม่ถูกต้อง!</h4>
+                    <p class="text-sm text-slate-400 px-4">ระบบได้ปิดการแสดงวิธีทำเพื่อกระตุ้นให้ท่านทบทวนการคำนวณและลองแก้โจทย์ด้วยตนเองใหม่อีกครั้งในด่านต่อไปนะ! สู้ ๆ</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Column: Camera HUD, Question Plates & Control (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Camera & Interactive Overlay Frame -->
+            <div id="interactive-container" class="relative bg-slate-950 rounded-3xl border-2 border-slate-800 overflow-hidden shadow-2xl flex flex-col items-center justify-center min-h-[500px]">
+                
+                <!-- Floating Exit Fullscreen Button -->
+                <button id="btn-close-fullscreen" class="absolute top-4 right-4 z-50 p-2.5 bg-slate-900/80 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-700/60 hidden transition-all active:scale-95">
+                    <i data-lucide="minimize-2" class="w-5 h-5"></i>
+                </button>
+
+                <!-- Screen Flash Glow Indicator (Both Green on correct and Red on incorrect) -->
+                <div id="pulse-indicator" class="absolute inset-0 z-40 pointer-events-none transition-all duration-300 rounded-3xl mix-blend-screen opacity-0"></div>
+
+                <!-- HUD Info bar (Top of Camera Viewport) -->
+                <div class="absolute top-0 inset-x-0 bg-gradient-to-b from-slate-950/90 via-slate-950/60 to-transparent p-4 z-30 flex justify-between items-center">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-sky-400 font-extrabold tracking-widest uppercase">โจทย์ข้อปัจจุบัน</span>
+                        <div class="text-xl md:text-2xl font-black text-slate-50 tracking-wide mt-0.5 bg-slate-950/40 px-3 py-1 rounded-xl backdrop-blur-sm border border-slate-800/30" id="current-expression">
+                            กำลังโหลดข้อมูล...
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-slate-800/60 text-right">
+                        <span class="text-[9px] text-slate-400 block font-bold">โหมดเซนเซอร์</span>
+                        <span class="text-xs font-semibold text-sky-400" id="sensor-mode-indicator">พร้อมใช้งาน</span>
+                    </div>
+                </div>
+
+                <!-- Interactive Computer Vision Canvas -->
+                <canvas id="motion-canvas" class="w-full aspect-[4/3] max-h-[500px] object-cover bg-slate-950/90 transition-transform duration-300"></canvas>
+
+                <!-- Hidden Native Camera Feed -->
+                <video id="webcam" autoplay playsinline muted class="absolute opacity-0 pointer-events-none" style="width: 1px; height: 1px;"></video>
+
+                <!-- Overlay Camera Access Block -->
+                <div id="camera-overlay" class="absolute inset-0 bg-slate-950/95 z-40 flex flex-col items-center justify-center p-6 text-center">
+                    <div class="w-16 h-16 bg-sky-950/60 text-sky-400 rounded-3xl flex items-center justify-center mb-4 border border-sky-800/40 animate-bounce">
+                        <i data-lucide="camera" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 text-slate-100">เปิดระบบตรวจจับความเคลื่อนไหว</h3>
+                    <p class="text-sm text-slate-400 max-w-sm mb-6 leading-relaxed">
+                        เกมนี้ต้องการเข้าถึงกล้องเว็บแคมของคุณเพื่อจับพิกัดนิ้วมือของผู้เรียนเป็นวงกลมจุดสีแดงเรืองแสงสำหรับการสะกิดแผ่นป้ายคำตอบบนหน้าจอ
+                    </p>
+                    <button id="btn-allow-camera" class="px-6 py-3 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 font-bold rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center gap-2">
+                        <i data-lucide="video" class="w-5 h-5 text-slate-950"></i>
+                        อนุญาตสิทธิ์กล้อง
+                    </button>
+                </div>
+            </div>
+
+            <!-- Backup Clickable Physical Answer Buttons (Always synchronous with Camera UI) -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3" id="fallback-buttons-container">
+                <!-- Buttons dynamically loaded -->
+            </div>
+
+            <!-- Console and Control Center -->
+            <div class="bg-slate-900/60 rounded-3xl p-5 border border-slate-800/80 backdrop-blur-sm shadow-xl flex flex-col md:flex-row items-center justify-between gap-5">
+                <div class="flex flex-col gap-1 w-full md:w-auto">
+                    <label for="sensitivity-slider" class="text-xs font-bold text-slate-400 flex justify-between">
+                        <span>ความไวของเซนเซอร์กล้อง (Sensitivity)</span>
+                        <span id="sensitivity-val" class="text-sky-400 font-extrabold">40%</span>
+                    </label>
+                    <input type="range" id="sensitivity-slider" min="10" max="90" value="40" class="w-full md:w-56 h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-sky-400">
+                </div>
+
+                <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                    <button id="btn-fullscreen" class="px-5 py-3 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 font-bold rounded-2xl shadow-lg flex items-center gap-2 transition-all transform active:scale-95">
+                        <i data-lucide="maximize" class="w-5 h-5 text-slate-950"></i>
+                        <span>ขยายเต็มจอ</span>
+                    </button>
+                    <button id="btn-restart" class="p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl border border-slate-700/60 transition-all transform active:scale-95">
+                        <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer of the Academy system -->
+    <footer class="border-t border-slate-900 bg-slate-950 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            สถาบันพัฒนานวัตกรรมแห่งทศวรรษเกมการศึกษา &copy; 2026 สงวนลิขสิทธิ์ตามมาตรฐานการเรียนรู้ สสวท. ประเทศไทย
+        </div>
+    </footer>
+
+    <script>
+        // Game configuration & deterministic state tracking
+        const state = {
+            currentLevel: 1,
+            currentQuestionIndex: 0,
+            levelScore: 0,
+            answersHistory: [], // Stores result status: true or false for the current level (20 questions)
+            soundEnabled: true,
+            sensitivity: 40,
+            currentQuestion: null,
+            canSelect: true,
+            activeSelections: [0, 0, 0, 0, 0] // Charges for the 5 answer plates on camera tracking
+        };
+
+        // Seeded random helper for deterministic and valid mathematical generation based on level/index
+        function generateQuestion(level, index) {
+            let seed = (level * 23) + (index * 37);
+            
+            function randomVal(min, max, dec = 3) {
+                let r = Math.sin(seed++) * 10000;
+                let val = min + (Math.abs(r) % (max - min));
+                return parseFloat(val.toFixed(dec));
+            }
+            
+            let A, B, C, D, expression, answer, steps = [];
+            
+            // Ensures numbers contain 2 or more digits before decimal and strictly 3 decimal places
+            switch(level) {
+                case 1: // A + B - C
+                    A = randomVal(15, 45);
+                    B = randomVal(10, 35);
+                    C = randomVal(10, 20);
+                    expression = `${A.toFixed(3)} + ${B.toFixed(3)} - ${C.toFixed(3)}`;
+                    answer = A + B - C;
+                    steps = [
+                        `ขั้นที่ 1: หาผลบวกในขั้นแรก คือ ${A.toFixed(3)} + ${B.toFixed(3)} = ${(A + B).toFixed(3)}`,
+                        `ขั้นที่ 2: นำผลลัพธ์มาลบด้วย ${C.toFixed(3)} จะได้ ${(A + B).toFixed(3)} - ${C.toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+                case 2: // A - (B - C)
+                    A = randomVal(60, 95);
+                    B = randomVal(30, 50);
+                    C = randomVal(10, 25);
+                    expression = `${A.toFixed(3)} - (${B.toFixed(3)} - ${C.toFixed(3)})`;
+                    answer = A - (B - C);
+                    steps = [
+                        `ขั้นที่ 1: หาค่าในวงเล็บก่อน คือ ${B.toFixed(3)} - ${C.toFixed(3)} = ${(B - C).toFixed(3)}`,
+                        `ขั้นที่ 2: นำ ${A.toFixed(3)} ตั้งแล้วลบด้วยผลลัพธ์ในวงเล็บ จะได้ ${A.toFixed(3)} - ${(B - C).toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+                case 3: // (A * B) + C
+                    A = randomVal(10, 25);
+                    B = randomVal(2, 5);
+                    C = randomVal(15, 40);
+                    expression = `(${A.toFixed(3)} × ${B.toFixed(3)}) + ${C.toFixed(3)}`;
+                    answer = (A * B) + C;
+                    steps = [
+                        `ขั้นที่ 1: หาผลคูณในวงเล็บก่อน คือ ${A.toFixed(3)} × ${B.toFixed(3)} = ${(A * B).toFixed(3)}`,
+                        `ขั้นที่ 2: นำผลคูณมาบวกกับ ${C.toFixed(3)} จะได้ ${(A * B).toFixed(3)} + ${C.toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+                case 4: // (A + B) * C
+                    A = randomVal(10, 20);
+                    B = randomVal(10, 15);
+                    C = randomVal(2, 4);
+                    expression = `(${A.toFixed(3)} + ${B.toFixed(3)}) × ${C.toFixed(3)}`;
+                    answer = (A + B) * C;
+                    steps = [
+                        `ขั้นที่ 1: หาผลบวกในวงเล็บก่อน คือ ${A.toFixed(3)} + ${B.toFixed(3)} = ${(A + B).toFixed(3)}`,
+                        `ขั้นที่ 2: นำผลบวกมาคูณกับ ${C.toFixed(3)} จะได้ ${(A + B).toFixed(3)} × ${C.toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+                case 5: // (A * B) - C
+                    A = randomVal(12, 25);
+                    B = randomVal(3, 5);
+                    C = randomVal(10, 30);
+                    expression = `(${A.toFixed(3)} × ${B.toFixed(3)}) - ${C.toFixed(3)}`;
+                    answer = (A * B) - C;
+                    steps = [
+                        `ขั้นที่ 1: คำนวณหาผลคูณในวงเล็บก่อน คือ ${A.toFixed(3)} × ${B.toFixed(3)} = ${(A * B).toFixed(3)}`,
+                        `ขั้นที่ 2: นำผลลัพธ์มาลบด้วย ${C.toFixed(3)} จะได้ ${(A * B).toFixed(3)} - ${C.toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+                case 6: // A - (B * C)
+                    A = randomVal(80, 99);
+                    B = randomVal(10, 15);
+                    C = randomVal(2, 5);
+                    expression = `${A.toFixed(3)} - (${B.toFixed(3)} × ${C.toFixed(3)})`;
+                    answer = A - (B * C);
+                    steps = [
+                        `ขั้นที่ 1: หาผลคูณในวงเล็บก่อน คือ ${B.toFixed(3)} × ${C.toFixed(3)} = ${(B * C).toFixed(3)}`,
+                        `ขั้นที่ 2: นำ ${A.toFixed(3)} มาลบด้วยผลคูณ จะได้ ${A.toFixed(3)} - ${(B * C).toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+                case 7: // A + B + C
+                    A = randomVal(15, 35);
+                    B = randomVal(10, 30);
+                    C = randomVal(12, 25);
+                    expression = `${A.toFixed(3)} + ${B.toFixed(3)} + ${C.toFixed(3)}`;
+                    answer = A + B + C;
+                    steps = [
+                        `ขั้นที่ 1: หาผลบวกคู่แรก คือ ${A.toFixed(3)} + ${B.toFixed(3)} = ${(A + B).toFixed(3)}`,
+                        `ขั้นที่ 2: นำผลบวกมาบวกกับจำนวนที่สาม คือ ${(A + B).toFixed(3)} + ${C.toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+                case 8: // (A - B) * C
+                    A = randomVal(40, 60);
+                    B = randomVal(15, 30);
+                    C = randomVal(1.5, 3.5, 2);
+                    expression = `(${A.toFixed(3)} - ${B.toFixed(3)}) × ${C.toFixed(3)}`;
+                    answer = (A - B) * C;
+                    steps = [
+                        `ขั้นที่ 1: หาผลลบในวงเล็บก่อน คือ ${A.toFixed(3)} - ${B.toFixed(3)} = ${(A - B).toFixed(3)}`,
+                        `ขั้นที่ 2: นำผลลบมาคูณด้วยตัวคูณภายนอก คือ ${(A - B).toFixed(3)} × ${C.toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+                case 9: // A * B * C
+                    A = randomVal(10, 15);
+                    B = randomVal(2, 3);
+                    C = randomVal(1.2, 2.5, 2);
+                    expression = `(${A.toFixed(3)} × ${B.toFixed(3)}) × ${C.toFixed(3)}`;
+                    answer = A * B * C;
+                    steps = [
+                        `ขั้นที่ 1: หาผลคูณของสองจำนวนแรก คือ ${A.toFixed(3)} × ${B.toFixed(3)} = ${(A * B).toFixed(3)}`,
+                        `ขั้นที่ 2: นำผลคูณมาคูณต่อกับตัวคูณที่สาม คือ ${(A * B).toFixed(3)} × ${C.toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+                case 10: // (A - B) * C + D (Grand Challenge)
+                    A = randomVal(35, 55);
+                    B = randomVal(15, 25);
+                    C = randomVal(2, 4);
+                    D = randomVal(10, 30);
+                    expression = `((${A.toFixed(3)} - ${B.toFixed(3)}) × ${C.toFixed(3)}) + ${D.toFixed(3)}`;
+                    answer = ((A - B) * C) + D;
+                    steps = [
+                        `ขั้นที่ 1: หาผลลบในวงเล็บในสุดก่อน คือ ${A.toFixed(3)} - ${B.toFixed(3)} = ${(A - B).toFixed(3)}`,
+                        `ขั้นที่ 2: นำผลลัพธ์มาคูณด้วย ${C.toFixed(3)} จะได้ ${(A - B).toFixed(3)} × ${C.toFixed(3)} = ${((A - B) * C).toFixed(3)}`,
+                        `ขั้นที่ 3: นำผลคูณมาบวกกับ ${D.toFixed(3)} จะได้ ${((A - B) * C).toFixed(3)} + ${D.toFixed(3)} = ${answer.toFixed(3)}`
+                    ];
+                    break;
+            }
+            
+            let ansStr = answer.toFixed(3);
+            let parsedAns = parseFloat(ansStr);
+            
+            // Build distractor answer plates
+            let optionsSet = new Set();
+            optionsSet.add(ansStr);
+            
+            let offsetSeed = seed;
+            while(optionsSet.size < 5) {
+                let offsetSign = (Math.sin(offsetSeed++) > 0) ? 1 : -1;
+                let slipType = Math.floor(Math.abs(Math.sin(offsetSeed++) * 100)) % 4;
+                let distractor;
+                if (slipType === 0) {
+                    distractor = parseFloat((parsedAns + (offsetSign * 1.000)).toFixed(3));
+                } else if (slipType === 1) {
+                    distractor = parseFloat((parsedAns + (offsetSign * 0.100)).toFixed(3));
+                } else if (slipType === 2) {
+                    distractor = parseFloat((parsedAns + (offsetSign * 0.010)).toFixed(3));
+                } else {
+                    distractor = parseFloat((parsedAns + (offsetSign * 0.001)).toFixed(3));
+                }
+                
+                if (distractor > 0 && distractor !== parsedAns) {
+                    optionsSet.add(distractor.toFixed(3));
+                }
+            }
+            
+            // Convert and shuffle deterministically
+            let options = Array.from(optionsSet);
+            let shuffleSeed = seed + 42;
+            for (let i = options.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.abs(Math.sin(shuffleSeed++)) * (i + 1)) % (i + 1);
+                let temp = options[i];
+                options[i] = options[j];
+                options[j] = temp;
+            }
+            
+            return {
+                expression: expression,
+                correctAnswer: ansStr,
+                options: options,
+                steps: steps
+            };
+        }
+
+        // Initialize state tracking structures
+        let chosenAnswer = null; 
+
+        // Sound Engine by Tone.js Synthesizers
+        function playChime(correct) {
+            if (!state.soundEnabled) return;
+            try {
+                const synth = new Tone.Synth().toDestination();
+                if (correct) {
+                    synth.triggerAttackRelease("C5", "8n", undefined, 0.4);
+                    setTimeout(() => synth.triggerAttackRelease("E5", "8n", undefined, 0.4), 100);
+                    setTimeout(() => synth.triggerAttackRelease("G5", "4n", undefined, 0.4), 200);
+                } else {
+                    const lowSynth = new Tone.Synth({
+                        oscillator: { type: "sawtooth" }
+                    }).toDestination();
+                    lowSynth.triggerAttackRelease("G2", "4n", undefined, 0.5);
+                }
+            } catch (err) {
+                console.warn("Audio Context ignored", err);
+            }
+        }
+
+        function loadLevelAndQuestion() {
+            state.currentQuestion = generateQuestion(state.currentLevel, state.currentQuestionIndex);
+            state.canSelect = true;
+            chosenAnswer = null;
+            state.activeSelections = [0, 0, 0, 0, 0];
+
+            // Update expressions on UI
+            document.getElementById("current-expression").innerText = state.currentQuestion.expression;
+            document.getElementById("current-level").innerText = state.currentLevel;
+            document.getElementById("score-text").innerText = state.levelScore;
+            document.getElementById("progress-ratio").innerText = `${state.currentQuestionIndex} / 20 ข้อ`;
+            document.getElementById("level-progress-bar").style.width = `${(state.currentQuestionIndex / 20) * 100}%`;
+
+            // Reset help card boxes
+            document.getElementById("solution-placeholder").classList.remove("hidden");
+            document.getElementById("solution-content").classList.add("hidden");
+            document.getElementById("solution-failed-box").classList.add("hidden");
+
+            renderFallbackButtons();
+            renderHistoryDots();
+            resetInteractivePulse();
+        }
+
+        function resetInteractivePulse() {
+            const pi = document.getElementById("pulse-indicator");
+            pi.className = "absolute inset-0 z-40 pointer-events-none transition-all duration-300 rounded-3xl mix-blend-screen opacity-0";
+        }
+
+        // Render standard physical backup buttons
+        function renderFallbackButtons() {
+            const container = document.getElementById("fallback-buttons-container");
+            container.innerHTML = "";
+            
+            state.currentQuestion.options.forEach((opt, idx) => {
+                const btn = document.createElement("button");
+                btn.className = "py-3 px-2 bg-slate-800/80 hover:bg-slate-700 text-slate-100 rounded-2xl border border-slate-700/50 text-sm font-semibold transition-all shadow-md transform active:scale-95";
+                btn.id = `fallback-opt-${idx}`;
+                btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt}`;
+                btn.addEventListener("click", () => {
+                    if (state.canSelect) handleAnswerSelection(opt, idx);
+                });
+                container.appendChild(btn);
+            });
+        }
+
+        // Render level history tracking grid
+        function renderHistoryDots() {
+            const grid = document.getElementById("history-grid");
+            grid.innerHTML = "";
+            for (let i = 0; i < 20; i++) {
+                const dot = document.createElement("div");
+                dot.className = "w-6 h-6 rounded-full border border-slate-800 flex items-center justify-center text-[10px] font-bold shadow-sm transition-all";
+                if (i < state.answersHistory.length) {
+                    if (state.answersHistory[i]) {
+                        dot.className = "w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-lg shadow-emerald-950/30";
+                        dot.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i>`;
+                    } else {
+                        dot.className = "w-6 h-6 rounded-full bg-red-500 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-lg shadow-red-950/30";
+                        dot.innerHTML = `<i data-lucide="x" class="w-3.5 h-3.5"></i>`;
+                    }
+                } else if (i === state.currentQuestionIndex) {
+                    dot.className = "w-6 h-6 rounded-full bg-sky-500 text-slate-950 animate-pulse flex items-center justify-center text-[10px] font-black shadow-lg shadow-sky-950/40";
+                    dot.innerText = i + 1;
+                } else {
+                    dot.className = "w-6 h-6 rounded-full bg-slate-800/50 text-slate-500 flex items-center justify-center text-[10px] border border-slate-700/30";
+                    dot.innerText = i + 1;
+                }
+                grid.appendChild(dot);
+            }
+            lucide.createIcons();
+        }
+
+        // Handle answer decision (motion triggered or click selection)
+        function handleAnswerSelection(selectedAnswer, index) {
+            if (!state.canSelect) return;
+            state.canSelect = false;
+            chosenAnswer = index;
+
+            const isCorrect = (selectedAnswer === state.currentQuestion.correctAnswer);
+            state.answersHistory.push(isCorrect);
+            if (isCorrect) state.levelScore++;
+
+            // Highlight fallback buttons
+            const fallbackBtn = document.getElementById(`fallback-opt-${index}`);
+            if (isCorrect) {
+                fallbackBtn.className = "py-3 px-2 bg-emerald-500 text-slate-950 rounded-2xl font-bold border-2 border-emerald-400 text-sm transition-all shadow-xl neon-shadow-correct";
+            } else {
+                fallbackBtn.className = "py-3 px-2 bg-red-500 text-slate-950 rounded-2xl font-bold border-2 border-red-400 text-sm transition-all shadow-xl neon-shadow-incorrect";
+            }
+
+            // Visual Screen Flashing indicators
+            const pulseInd = document.getElementById("pulse-indicator");
+            if (isCorrect) {
+                pulseInd.classList.add("pulse-correct");
+                playChime(true);
+                
+                // Show สสวท. Academic solution box ONLY on correct
+                document.getElementById("solution-placeholder").classList.add("hidden");
+                document.getElementById("solution-failed-box").classList.add("hidden");
+                document.getElementById("solution-content").classList.remove("hidden");
+                
+                const stepsContainer = document.getElementById("solution-steps");
+                stepsContainer.innerHTML = "";
+                state.currentQuestion.steps.forEach((stepText, idx) => {
+                    const stepDiv = document.createElement("div");
+                    stepDiv.className = "p-2.5 bg-slate-950/50 rounded-xl border border-slate-800 text-xs text-slate-300 font-medium leading-relaxed flex items-start gap-2 animate-fade-in";
+                    stepDiv.innerHTML = `<span class="bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded text-[10px] font-bold">ขั้นตอน ${idx+1}</span> <span>${stepText}</span>`;
+                    stepsContainer.appendChild(stepDiv);
+                });
+            } else {
+                // Flash RED on failure, but NO CORRECT ANSWER OR SOLUTIONS SHOWN!
+                pulseInd.classList.add("pulse-incorrect");
+                playChime(false);
+
+                // Show Encouragement Box, Hide solutions, Hide answers
+                document.getElementById("solution-placeholder").classList.add("hidden");
+                document.getElementById("solution-content").classList.add("hidden");
+                document.getElementById("solution-failed-box").classList.remove("hidden");
+            }
+
+            renderHistoryDots();
+
+            // Setup Transition timer to next question
+            setTimeout(() => {
+                transitionToNext();
+            }, 3500);
+        }
+
+        function transitionToNext() {
+            state.currentQuestionIndex++;
+            
+            if (state.currentQuestionIndex >= 20) {
+                // Check level progression
+                if (state.levelScore >= 12) { // Passing score 60%
+                    if (state.currentLevel < 10) {
+                        alert(`ยินดีด้วย! คุณผ่านด่านที่ ${state.currentLevel} ไปยังด่านถัดไป`);
+                        state.currentLevel++;
+                    } else {
+                        alert("สุดยอดความอัจฉริยะ! คุณสำเร็จหลักสูตรทศนิยมระดับประลัยครบทั้ง 10 ด่านแล้ว!");
+                        state.currentLevel = 1;
+                    }
+                } else {
+                    alert(`คะแนนสอบในด่านยังไม่ถึงเกณฑ์ 12/20 ข้อ! ลองศึกษาและสู้ใหม่อีกครั้งในด่านนี้`);
+                }
+                state.currentQuestionIndex = 0;
+                state.levelScore = 0;
+                state.answersHistory = [];
+            }
+            
+            loadLevelAndQuestion();
+        }
+
+        const motionDetection = {
+            video: null,
+            canvas: null,
+            ctx: null,
+            prevFrame: null,
+            plates: [],
+            isCameraActive: false,
+            width: 640,
+            height: 480,
+
+            init(videoElement, canvasElement) {
+                this.video = videoElement;
+                this.canvas = canvasElement;
+                this.ctx = canvasElement.getContext('2d');
+                
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.setupPlates();
+            },
+
+            resizeCanvas() {
+                const parent = this.canvas.parentElement;
+                const aspect = 4 / 3;
+                let w = parent.clientWidth;
+                let h = w / aspect;
+                
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+            },
+
+            setupPlates() {
+                // Symmetric 5 Plates positioning: 3 top row, 2 bottom row
+                this.plates = [
+                    { id: 0, label: "A", x: 70, y: 120, w: 140, h: 90, color: "rgba(14, 165, 233, 0.7)" },
+                    { id: 1, label: "B", x: 250, y: 120, w: 140, h: 90, color: "rgba(14, 165, 233, 0.7)" },
+                    { id: 2, label: "C", x: 430, y: 120, w: 140, h: 90, color: "rgba(14, 165, 233, 0.7)" },
+                    { id: 3, label: "D", x: 150, y: 280, w: 150, h: 95, color: "rgba(14, 165, 233, 0.7)" },
+                    { id: 4, label: "E", x: 340, y: 280, w: 150, h: 95, color: "rgba(14, 165, 233, 0.7)" }
+                ];
+            },
+
+            startCamera() {
+                navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480, facingMode: "user" }, 
+                    audio: false 
+                })
+                .then(stream => {
+                    this.video.srcObject = stream;
+                    this.video.play();
+                    this.isCameraActive = true;
+                    document.getElementById("camera-overlay").classList.add("hidden");
+                    document.getElementById("detection-status-text").innerText = "เซนเซอร์ทำงานปกติ";
+                    this.tick();
+                })
+                .catch(err => {
+                    console.error("Camera access failed", err);
+                    document.getElementById("detection-status-text").innerText = "กล้องถูกขัดขวาง";
+                });
+            },
+
+            tick() {
+                if (!this.isCameraActive) return;
+                
+                this.ctx.save();
+                // Mirror effect
+                this.ctx.translate(this.width, 0);
+                this.ctx.scale(-1, 1);
+                this.ctx.drawImage(this.video, 0, 0, this.width, this.height);
+                this.ctx.restore();
+
+                const currentFrame = this.ctx.getImageData(0, 0, this.width, this.height);
+                
+                if (this.prevFrame) {
+                    this.detectMotion(currentFrame, this.prevFrame);
+                }
+
+                this.prevFrame = currentFrame;
+
+                this.drawHUD();
+                
+                requestAnimationFrame(() => this.tick());
+            },
+
+            detectMotion(curr, prev) {
+                const threshold = state.sensitivity;
+                const motionPoints = [0, 0, 0, 0, 0];
+                const dataCurr = curr.data;
+                const dataPrev = prev.data;
+                const step = 8; // Step scanning for computation speed efficiency
+
+                this.ctx.fillStyle = "rgba(239, 68, 68, 0.9)"; // RED Tracking dot color
+
+                for (let y = 0; y < this.height; y += step) {
+                    for (let x = 0; x < this.width; x += step) {
+                        const index = (x + y * this.width) * 4;
+                        
+                        const rDiff = Math.abs(dataCurr[index] - dataPrev[index]);
+                        const gDiff = Math.abs(dataCurr[index + 1] - dataPrev[index + 1]);
+                        const bDiff = Math.abs(dataCurr[index + 2] - dataPrev[index + 2]);
+                        
+                        if (rDiff + gDiff + bDiff > threshold * 3) {
+                            // Draw tracking dot
+                            this.ctx.beginPath();
+                            this.ctx.arc(x, y, 3, 0, Math.PI * 2);
+                            this.ctx.fill();
+
+                            // Evaluate overlapping answer plates
+                            this.plates.forEach((plate, idx) => {
+                                if (x >= plate.x && x <= plate.x + plate.w &&
+                                    y >= plate.y && y <= plate.y + plate.h) {
+                                    motionPoints[idx]++;
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Smooth charging levels for answer plates
+                if (state.canSelect) {
+                    motionPoints.forEach((pts, idx) => {
+                        if (pts > 8) { // Hovering detected
+                            state.activeSelections[idx] = Math.min(100, state.activeSelections[idx] + 4);
+                        } else { // Decaying when not hovering
+                            state.activeSelections[idx] = Math.max(0, state.activeSelections[idx] - 3);
+                        }
+
+                        // Trigger decision on full charge
+                        if (state.activeSelections[idx] >= 100) {
+                            const selectedOption = state.currentQuestion.options[idx];
+                            handleAnswerSelection(selectedOption, idx);
+                        }
+                    });
+                }
+            },
+
+            drawHUD() {
+                this.plates.forEach((plate, idx) => {
+                    const charge = state.activeSelections[idx];
+                    const optionVal = state.currentQuestion ? state.currentQuestion.options[idx] : "";
+                    
+                    // Box styling
+                    this.ctx.lineWidth = 4;
+                    if (!state.canSelect) {
+                        // Evaluation state
+                        if (chosenAnswer === idx) {
+                            const isCorrect = (optionVal === state.currentQuestion.correctAnswer);
+                            this.ctx.strokeStyle = isCorrect ? "rgba(16, 185, 129, 0.9)" : "rgba(239, 68, 68, 0.9)";
+                            this.ctx.fillStyle = isCorrect ? "rgba(16, 185, 129, 0.25)" : "rgba(239, 68, 68, 0.25)";
+                        } else {
+                            // Greyed out incorrect or unchosen options - Do not reveal the correct answer on failure
+                            this.ctx.strokeStyle = "rgba(71, 85, 105, 0.4)";
+                            this.ctx.fillStyle = "rgba(15, 23, 42, 0.5)";
+                        }
+                    } else {
+                        // Charging state border styling
+                        this.ctx.strokeStyle = charge > 0 ? `rgba(14, 165, 233, ${0.4 + (charge/200)})` : "rgba(14, 165, 233, 0.3)";
+                        this.ctx.fillStyle = "rgba(15, 23, 42, 0.65)";
+                    }
+
+                    // Render plates
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(plate.x, plate.y, plate.w, plate.h, 16);
+                    this.ctx.fill();
+                    this.ctx.stroke();
+
+                    // Render active neon fills (charging animation)
+                    if (state.canSelect && charge > 0) {
+                        this.ctx.fillStyle = "rgba(14, 165, 233, 0.15)";
+                        this.ctx.beginPath();
+                        this.ctx.roundRect(plate.x, plate.y, (plate.w * charge) / 100, plate.h, 16);
+                        this.ctx.fill();
+                    }
+
+                    // Write plate labels and options values
+                    this.ctx.fillStyle = "#ffffff";
+                    this.ctx.font = "bold 15px Kanit";
+                    this.ctx.fillText(`${plate.label}.`, plate.x + 15, plate.y + 30);
+
+                    this.ctx.fillStyle = "rgba(56, 189, 248, 1)";
+                    this.ctx.font = "bold 18px Kanit";
+                    this.ctx.textAlign = "center";
+                    this.ctx.fillText(optionVal, plate.x + (plate.w / 2), plate.y + 55);
+                    this.ctx.textAlign = "left"; // reset alignment
+                });
+            }
+        };
+
+        document.getElementById("btn-allow-camera").addEventListener("click", () => {
+            motionDetection.startCamera();
+        });
+
+        document.getElementById("sensitivity-slider").addEventListener("input", (e) => {
+            state.sensitivity = parseInt(e.target.value);
+            document.getElementById("sensitivity-val").innerText = `${state.sensitivity}%`;
+        });
+
+        document.getElementById("btn-restart").addEventListener("click", () => {
+            state.currentLevel = 1;
+            state.currentQuestionIndex = 0;
+            state.levelScore = 0;
+            state.answersHistory = [];
+            loadLevelAndQuestion();
+        });
+
+        document.getElementById("sound-toggle").addEventListener("click", () => {
+            state.soundEnabled = !state.soundEnabled;
+            const btn = document.getElementById("sound-toggle");
+            if (state.soundEnabled) {
+                btn.className = "p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl border border-slate-700/50 transition-all";
+                btn.innerHTML = `<i data-lucide="volume-2" class="w-5 h-5"></i>`;
+            } else {
+                btn.className = "p-2 bg-slate-800 hover:bg-slate-700 text-slate-500 rounded-xl border border-slate-700/50 transition-all";
+                btn.innerHTML = `<i data-lucide="volume-x" class="w-5 h-5"></i>`;
+            }
+            lucide.createIcons();
+        });
+
+        // Fullscreen elements setup
+        const interactiveContainer = document.getElementById("interactive-container");
+        const btnFullscreen = document.getElementById("btn-fullscreen");
+        const btnCloseFullscreen = document.getElementById("btn-close-fullscreen");
+
+        function toggleFullscreen(enable) {
+            if (enable) {
+                interactiveContainer.requestFullscreen()
+                    .catch(err => {
+                        console.warn("Native fullscreen blocked by permissions. Activating virtual theater fallback.", err);
+                        interactiveContainer.classList.add("virtual-fullscreen");
+                        updateFullscreenUI(true);
+                    });
+            } else {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else if (interactiveContainer.classList.contains("virtual-fullscreen")) {
+                    interactiveContainer.classList.remove("virtual-fullscreen");
+                    updateFullscreenUI(false);
+                }
+            }
+        }
+
+        function updateFullscreenUI(isActive) {
+            const icon = btnFullscreen.querySelector("i");
+            const span = btnFullscreen.querySelector("span");
+
+            if (isActive) {
+                btnFullscreen.classList.remove("from-sky-500", "to-indigo-600");
+                btnFullscreen.classList.add("bg-slate-800", "hover:bg-slate-700", "text-slate-300");
+                icon.setAttribute("data-lucide", "minimize");
+                span.innerText = "ย่อหน้าจอ";
+                btnCloseFullscreen.classList.remove("hidden");
+            } else {
+                btnFullscreen.classList.remove("bg-slate-800", "hover:bg-slate-700", "text-slate-300");
+                btnFullscreen.classList.add("from-sky-500", "to-indigo-600");
+                icon.setAttribute("data-lucide", "maximize");
+                span.innerText = "ขยายเต็มจอ";
+                btnCloseFullscreen.classList.add("hidden");
+            }
+            lucide.createIcons();
+            
+            setTimeout(() => { motionDetection.resizeCanvas(); }, 150);
+        }
+
+        btnFullscreen.addEventListener("click", () => {
+            const isActive = document.fullscreenElement || interactiveContainer.classList.contains("virtual-fullscreen");
+            toggleFullscreen(!isActive);
+        });
+
+        btnCloseFullscreen.addEventListener("click", () => {
+            toggleFullscreen(false);
+        });
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                toggleFullscreen(false);
+            }
+        });
+
+        document.addEventListener("fullscreenchange", () => {
+            const isNativeActive = !!document.fullscreenElement;
+            updateFullscreenUI(isNativeActive);
+        });
+
+        // Initialize App on Window Load
+        window.onload = function () {
+            lucide.createIcons();
+            loadLevelAndQuestion();
+            motionDetection.init(document.getElementById("webcam"), document.getElementById("motion-canvas"));
+        }
+    </script>
+</body>
+</html>
