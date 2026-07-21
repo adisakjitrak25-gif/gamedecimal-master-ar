@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decimal Dash: Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #webcam { transform: scaleX(-1); }
+        .answer-btn { transition: all 0.2s; }
+        .flash-green { animation: flashGreen 0.5s; }
+        .flash-red { animation: flashRed 0.5s; }
+        @keyframes flashGreen { 0%, 100% { background: #facc15; } 50% { background: #22c55e; } }
+        @keyframes flashRed { 0%, 100% { background: #facc15; } 50% { background: #ef4444; } }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-sans overflow-hidden">
+    <div class="relative w-screen h-screen">
+        <video id="webcam" autoplay playsinline class="absolute inset-0 w-full h-full object-cover opacity-50"></video>
+        
+        <div class="absolute inset-0 flex flex-col items-center justify-between p-8">
+            <div class="text-center bg-black/50 p-6 rounded-3xl backdrop-blur-md border border-white/10">
+                <h1 class="text-3xl font-bold mb-2">Decimal Dash: Level <span id="level">1</span></h1>
+                <p class="text-xl">โจทย์ข้อที่ <span id="q-index">1</span>/10 | คะแนนรวม: <span id="score">0</span></p>
+                <div id="question" class="text-6xl font-black mt-4 text-yellow-400">...</div>
+            </div>
+
+            <div id="options" class="grid grid-cols-5 gap-6 w-full max-w-4xl">
+                <!-- Buttons injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLevel = 1, currentQuestion = 0, score = 0, correctAnswer = 0;
+
+        function generateQuestion() {
+            let q = "", ans = 0;
+            // Generate logic based on level
+            const a = parseFloat((Math.random() * 50).toFixed(3));
+            const b = parseFloat((Math.random() * 50).toFixed(3));
+            const c = parseFloat((Math.random() * 50).toFixed(3));
+            
+            if (currentLevel === 1) {
+                q = `${a} + ${b}`; ans = a + b;
+            } else if (currentLevel === 2) {
+                q = `(${a} + ${b}) - ${c < (a+b) ? c : 0.1}`; ans = (a + b) - (c < (a+b) ? c : 0.1);
+            } else {
+                q = `${a} + (${b} - ${c < b ? c : 0})`; ans = a + (b - (c < b ? c : 0));
+            }
+            return { q, ans: parseFloat(ans.toFixed(3)) };
+        }
+
+        async function initCamera() {
+            try {
+                const video = document.getElementById('webcam');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) { console.error("Camera access error:", err); }
+        }
+
+        function loadQuestion() {
+            if (currentQuestion >= 10) {
+                currentLevel++; currentQuestion = 0;
+                if (currentLevel > 5) {
+                    document.body.innerHTML = `<div class="flex flex-col items-center justify-center h-screen text-4xl">เกมจบแล้ว! คะแนนรวม: ${score}<button onclick="location.reload()" class="mt-8 p-6 bg-yellow-400 text-black rounded-2xl">เริ่มใหม่</button></div>`;
+                    return;
+                }
+            }
+            
+            const data = generateQuestion();
+            correctAnswer = data.ans;
+            document.getElementById('question').innerText = data.q;
+            document.getElementById('level').innerText = currentLevel;
+            document.getElementById('q-index').innerText = currentQuestion + 1;
+            document.getElementById('score').innerText = score;
+
+            const container = document.getElementById('options');
+            container.innerHTML = '';
+            
+            let options = [correctAnswer];
+            while(options.length < 5) {
+                let fake = parseFloat((correctAnswer + (Math.random() * 10 - 5)).toFixed(3));
+                if (fake > 0 && !options.includes(fake)) options.push(fake);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "answer-btn flex items-center justify-center p-8 bg-yellow-400 text-black font-black text-3xl rounded-2xl shadow-xl border-b-8 border-yellow-600";
+                btn.innerText = opt.toFixed(3);
+                btn.onclick = (e) => checkAnswer(opt, e.target);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(val, el) {
+            if (Math.abs(val - correctAnswer) < 0.001) {
+                score++;
+                el.classList.add('flash-green');
+            } else {
+                el.classList.add('flash-red');
+            }
+            setTimeout(() => {
+                currentQuestion++;
+                loadQuestion();
+            }, 600);
+        }
+
+        window.onload = () => { initCamera(); loadQuestion(); };
+    </script>
+</body>
+</html>

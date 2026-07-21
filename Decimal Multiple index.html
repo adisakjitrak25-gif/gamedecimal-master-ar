@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decimal Master: Motion Math</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #f0f4f8; font-family: 'Inter', sans-serif; }
+        .choice-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            padding: 24px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            text-align: center;
+            font-size: 1.75rem;
+            font-weight: 800;
+            border: 3px solid transparent;
+        }
+        .choice-card:hover { transform: scale(1.05); border-color: #3b82f6; }
+        .flash-green { background-color: #22c55e !important; color: white !important; }
+        .flash-red { background-color: #ef4444 !important; color: white !important; }
+        #webcam { transform: scaleX(-1); background: #333; border-radius: 20px; width: 100%; max-width: 400px; height: 225px; object-fit: cover; }
+    </style>
+</head>
+<body>
+    <div class="max-w-5xl mx-auto p-6">
+        <div class="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-xl">
+            <h1 class="text-2xl font-black text-blue-900">Decimal Master ป.6</h1>
+            <div class="text-lg font-bold">
+                ด่าน: <span id="level" class="text-blue-600">1</span> | 
+                ข้อที่: <span id="question-count" class="text-blue-600">1</span>/20 | 
+                คะแนน: <span id="score" class="text-blue-600">0</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-8">
+            <video id="webcam" autoplay playsinline muted></video>
+            <div id="question-box" class="text-5xl font-extrabold text-blue-950 bg-white px-12 py-8 rounded-3xl shadow-2xl border-4 border-blue-100">
+                Loading...
+            </div>
+            <div id="choices-container" class="grid grid-cols-2 md:grid-cols-5 gap-6 w-full">
+                <!-- Choices rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            level: 1,
+            questionIndex: 0,
+            score: 0,
+            currentCorrect: null,
+            isAnswered: false
+        };
+
+        async function initCamera() {
+            const video = document.getElementById('webcam');
+            if (!video) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) { 
+                console.error("Camera access failed", err); 
+            }
+        }
+
+        function generateQuestion() {
+            const questionBox = document.getElementById('question-box');
+            
+            // Randomly decide: true = decimal (1.1 - 99.9), false = integer (10 - 99)
+            const isDecimal = Math.random() > 0.5;
+            let factorA;
+            if(isDecimal) {
+                factorA = parseFloat((Math.random() * 98.8 + 1.1).toFixed(1));
+            } else {
+                factorA = Math.floor(Math.random() * 90) + 10;
+            }
+
+            // Multiplier: 0.01 - 9.99
+            const factorB = parseFloat((Math.random() * 9.98 + 0.01).toFixed(2));
+            
+            // Calculate and limit product to 3 decimal places
+            const product = parseFloat((factorA * factorB).toFixed(3));
+            
+            state.currentCorrect = product;
+            questionBox.innerText = `${factorA} × ${factorB} = ?`;
+            
+            // Generate wrong answers
+            const choices = [state.currentCorrect];
+            while(choices.length < 5) {
+                let dist = (Math.random() * 5 - 2.5).toFixed(2);
+                let wrongChoice = parseFloat((state.currentCorrect + parseFloat(dist)).toFixed(3));
+                if(!choices.includes(wrongChoice) && wrongChoice > 0) choices.push(wrongChoice);
+            }
+            choices.sort(() => Math.random() - 0.5);
+            
+            renderChoices(choices);
+        }
+
+        function renderChoices(choices) {
+            const choicesContainer = document.getElementById('choices-container');
+            choicesContainer.innerHTML = '';
+            choices.forEach((c) => {
+                const div = document.createElement('div');
+                div.className = 'choice-card';
+                div.innerText = c;
+                div.onclick = () => handleInput(c, div);
+                choicesContainer.appendChild(div);
+            });
+        }
+
+        function handleInput(val, element) {
+            if(state.isAnswered) return;
+            state.isAnswered = true;
+
+            if(val === state.currentCorrect) {
+                element.classList.add('flash-green');
+                state.score++;
+                document.getElementById('score').innerText = state.score;
+            } else {
+                element.classList.add('flash-red');
+            }
+
+            setTimeout(() => {
+                state.questionIndex++;
+                if(state.questionIndex >= 20) {
+                    state.level = Math.min(state.level + 1, 10);
+                    state.questionIndex = 0;
+                }
+                document.getElementById('level').innerText = state.level;
+                document.getElementById('question-count').innerText = state.questionIndex + 1;
+                state.isAnswered = false;
+                generateQuestion();
+            }, 1200);
+        }
+
+        window.onload = () => {
+            initCamera();
+            generateQuestion();
+        };
+    </script>
+</body>
+</html>
